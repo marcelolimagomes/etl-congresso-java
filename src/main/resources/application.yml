@@ -1,0 +1,178 @@
+spring:
+  application:
+    name: etl-congresso
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/etl_congresso}
+    username: ${SPRING_DATASOURCE_USERNAME:etl_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:etl_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      auto-commit: false
+      pool-name: HikariPool-ETL
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          batch_size: 500
+          order_inserts: true
+          order_updates: true
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    out-of-order: false
+    sql-migration-prefix: V
+    sql-migration-separator: __
+    # Silver schema — Flyway cria e gerencia junto com public
+    schemas: public, silver
+
+  jackson:
+    date-format: "yyyy-MM-dd'T'HH:mm:ss"
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: America/Sao_Paulo
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ETL — Configurações específicas
+# ─────────────────────────────────────────────────────────────────────────────
+etl:
+  camara:
+    base-url: ${ETL_CAMARA_BASE_URL:https://dadosabertos.camara.leg.br}
+    api-path: /api/v2
+    csv-base-url: ${ETL_CAMARA_CSV_BASE_URL:https://dadosabertos.camara.leg.br/arquivos}
+    csv-url-pattern: ${ETL_CAMARA_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/proposicoes/csv/proposicoes-{ano}.csv}
+    csv-tmp-dir: ${ETL_CSV_TMP_DIR:/tmp/etl/camara}
+    tipos-aceitos: ${ETL_CAMARA_TIPOS:PL,PLP,MPV,PEC,PDL,PR,PDS}
+    tipos-proposicao: PL,PLP,MPV,PEC,PDL,PR
+    ano-inicio: ${ETL_CAMARA_ANO_INICIO:1988}
+    ano-inicio-historico: 2001
+    timeout-seconds: 120
+    chunk-size: 10000
+
+  senado:
+    base-url: ${ETL_SENADO_BASE_URL:https://legis.senado.leg.br}
+    api-path: /dadosabertos
+    timeout-seconds: 60
+    tipos-aceitos: ${ETL_SENADO_TIPOS:PL,PLS,PLC,MPV,PEC,PDL,PRN,PDS}
+    ano-inicio: ${ETL_SENADO_ANO_INICIO:1988}
+    ano-inicio-historico: 1988
+    page-size: 100
+    enrich-url-texto: ${ETL_SENADO_ENRICH_URL_TEXTO:false}
+
+  incremental:
+    janela-dias: 2
+    camara:
+      lookback-days: ${ETL_CAMARA_LOOKBACK_DAYS:7}
+    senado:
+      lookback-days: ${ETL_SENADO_LOOKBACK_DAYS:7}
+
+  batch-size: ${ETL_BATCH_SIZE:500}
+
+  executor:
+    core-pool-size: 8
+    max-pool-size: 16
+    queue-capacity: 200
+
+  scheduler:
+    enabled: ${ETL_SCHEDULER_ENABLED:true}
+    cron:
+      camara: ${ETL_SCHEDULER_CRON_CAMARA:0 0 2 * * *}
+      senado: ${ETL_SCHEDULER_CRON_SENADO:0 0 3 * * *}
+    timezone: America/Sao_Paulo
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resilience4j
+# ─────────────────────────────────────────────────────────────────────────────
+resilience4j:
+  ratelimiter:
+    instances:
+      senadoApi:
+        limit-for-period: 8
+        limit-refresh-period: 1s
+        timeout-duration: 500ms
+      camaraApi:
+        limit-for-period: 20
+        limit-refresh-period: 1s
+        timeout-duration: 500ms
+
+  retry:
+    instances:
+      senadoApi:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.io.IOException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+      camaraApi:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+
+  circuitbreaker:
+    instances:
+      senadoApi:
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 5
+        sliding-window-size: 20
+        sliding-window-type: COUNT_BASED
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Segurança
+# ─────────────────────────────────────────────────────────────────────────────
+admin:
+  username: ${ADMIN_USERNAME:admin}
+  password: ${ADMIN_PASSWORD:changeme}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Actuator / Métricas
+# ─────────────────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,flyway
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────────────────────────────────────
+logging:
+  level:
+    br.leg.congresso.etl: INFO
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /app/logs/etl-congresso.log

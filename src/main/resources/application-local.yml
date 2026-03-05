@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    br.leg.congresso.etl: DEBUG
+    org.hibernate.SQL: DEBUG
+
+etl:
+  scheduler:
+    enabled: false   # Não executar scheduler automaticamente em dev

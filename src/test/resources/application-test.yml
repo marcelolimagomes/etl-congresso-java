@@ -1,0 +1,41 @@
+# Perfil de teste — sobrescreve configurações do application.yml
+spring:
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate   # Flyway já cria as tabelas; Hibernate só valida
+
+  flyway:
+    enabled: true
+    validate-on-migrate: true
+
+  # Desabilita o scheduler automático nos testes de integração
+  task:
+    scheduling:
+      enabled: false
+
+# Credenciais de admin para testes
+admin:
+  username: testadmin
+  password: testpass
+
+# Desabilita agendamento de ETL durante os testes
+etl:
+  scheduler:
+    enabled: false
+  camara:
+    csv-url-pattern: http://localhost/test/proposicoes-{ano}.csv
+    csv-tmp-dir: /tmp/test/etl/camara
+    tipos-aceitos: PL,PLP,MPV,PEC,PDL
+    ano-inicio: 2024
+    chunk-size: 100
+  senado:
+    tipos-aceitos: PL,PLS,MPV,PEC
+    ano-inicio: 2024
+  batch-size: 50
+
+logging:
+  level:
+    br.leg.congresso: WARN
+    org.flywaydb: WARN
+    org.hibernate: WARN
