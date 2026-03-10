@@ -1,0 +1,322 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+  <!--
+  Template principal: detalhe de proposição/matéria legislativa.
+  Gerado pelo etl-congresso-java (Thymeleaf standalone).
+  Serve como página estática pré-renderizada para SEO.
+  Após hidratação do Vue, a aplicação open-data assume a interatividade.
+-->
+  <head>
+    <th:block th:replace="~{fragments/head-seo :: head(${page})}" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Breadcrumb ─────────────────────────────────────────────────── -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Início</a>
+        <span class="sep">/</span>
+        <a href="/proposicoes">Proposições</a>
+        <span class="sep">/</span>
+        <span th:text="${page.siglaTipo + ' ' + page.numero + '/' + page.ano}"
+          >PL 1234/2024</span
+        >
+      </nav>
+
+      <!-- Cabeçalho da proposição ─────────────────────────────────────── -->
+      <div class="card" data-testid="proposicao-detalhe-header">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+          "
+        >
+          <div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+                margin-bottom: 0.75rem;
+              "
+            >
+              <h1
+                th:text="${page.siglaTipo + ' ' + page.numero + '/' + page.ano}"
+              >
+                PL 1234/2024
+              </h1>
+              <span
+                th:class="${'badge ' + (page.casa == 'camara' ? 'badge-camara' : 'badge-senado')}"
+                th:text="${page.casaLabel}"
+                >Câmara dos Deputados</span
+              >
+              <span
+                th:class="${'badge ' + (page.situacaoTramitacao == 'tramitando' ? 'badge-tramitando' : (page.situacaoTramitacao == 'encerrada' ? 'badge-encerrada' : 'badge-neutral'))}"
+                th:text="${page.situacaoDescricao != null ? page.situacaoDescricao : (page.situacaoTramitacao == 'tramitando' ? 'Em tramitação' : 'Encerrada')}"
+              >
+                Em tramitação
+              </span>
+            </div>
+
+            <p
+              style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0"
+              th:text="${page.descricaoTipo}"
+            >
+              Projeto de Lei
+            </p>
+
+            <p class="ementa-text" th:text="${page.ementa}">
+              Ementa da proposição.
+            </p>
+          </div>
+
+          <div
+            th:if="${page.urlInteiroTeor != null and !#strings.isEmpty(page.urlInteiroTeor)}"
+          >
+            <a
+              th:href="${page.urlInteiroTeor}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-primary"
+            >
+              Inteiro Teor ↗
+            </a>
+          </div>
+        </div>
+
+        <!-- Metadados resumidos ----------------------------------------- -->
+        <div class="meta-row">
+          <span
+            class="meta-item"
+            th:if="${page.autoriaResumo != null and !#strings.isEmpty(page.autoriaResumo)}"
+          >
+            👤 <span th:text="${page.autoriaResumo}"></span>
+          </span>
+          <span class="meta-item" th:if="${page.dataApresentacao != null}">
+            📅 Apresentada em <span th:text="${page.dataApresentacao}"></span>
+          </span>
+          <span
+            class="meta-item"
+            th:if="${page.orgaoAtual != null and !#strings.isEmpty(page.orgaoAtual)}"
+          >
+            🏛 <span th:text="${page.orgaoAtual}"></span>
+          </span>
+          <span
+            class="meta-item"
+            th:if="${page.regime != null and !#strings.isEmpty(page.regime)}"
+          >
+            ⚖️ <span th:text="${page.regime}"></span>
+          </span>
+        </div>
+
+        <!-- Palavras-chave ----------------------------------------------- -->
+        <div class="keywords" th:if="${!page.keywords.isEmpty()}">
+          <span
+            class="keyword-badge"
+            th:each="kw : ${page.keywords}"
+            th:text="${kw}"
+            >palavra-chave</span
+          >
+        </div>
+      </div>
+
+      <!-- Informações Gerais ──────────────────────────────────────────── -->
+      <div class="card" data-testid="proposicao-tab-info">
+        <div class="section-title">Informações Gerais</div>
+        <dl class="info-grid">
+          <div>
+            <dt>Tipo</dt>
+            <dd th:text="${page.descricaoTipo}">Projeto de Lei</dd>
+          </div>
+          <div>
+            <dt>Número/Ano</dt>
+            <dd th:text="${page.numero + '/' + page.ano}">1234/2024</dd>
+          </div>
+          <div>
+            <dt>Casa de Origem</dt>
+            <dd th:text="${page.casaLabel}">Câmara dos Deputados</dd>
+          </div>
+          <div>
+            <dt>Data de Apresentação</dt>
+            <dd
+              th:text="${page.dataApresentacao != null ? page.dataApresentacao : 'Não informada'}"
+            >
+              01/01/2024
+            </dd>
+          </div>
+          <div>
+            <dt>Situação</dt>
+            <dd
+              th:text="${page.situacaoDescricao != null ? page.situacaoDescricao : 'Não informada'}"
+            >
+              Em tramitação
+            </dd>
+          </div>
+          <div
+            th:if="${page.orgaoAtual != null and !#strings.isEmpty(page.orgaoAtual)}"
+          >
+            <dt>Órgão Atual</dt>
+            <dd th:text="${page.orgaoAtual}">CCJ</dd>
+          </div>
+        </dl>
+
+        <div
+          th:if="${page.ementaDetalhada != null and !#strings.isEmpty(page.ementaDetalhada)}"
+          style="margin-top: 1.5rem"
+        >
+          <h3
+            style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem"
+          >
+            Ementa Detalhada / Indexação
+          </h3>
+          <p class="ementa-detalhada" th:text="${page.ementaDetalhada}"></p>
+        </div>
+      </div>
+
+      <!-- Autores ─────────────────────────────────────────────────────── -->
+      <div
+        class="card"
+        data-testid="proposicao-tab-autores"
+        th:if="${!page.autores.isEmpty()}"
+      >
+        <div
+          class="section-title"
+          th:text="${'Autores (' + page.autores.size() + ')'}"
+        >
+          Autores
+        </div>
+
+        <div th:each="autor : ${page.autores}" class="author-item">
+          <div>
+            <a
+              th:if="${autor.casa != null and autor.idOriginal != null}"
+              th:href="${'/parlamentares/' + autor.casa + '-' + autor.idOriginal}"
+              class="author-name"
+              th:text="${autor.nome}"
+              >Nome do Autor</a
+            >
+            <span
+              th:unless="${autor.casa != null and autor.idOriginal != null}"
+              class="author-name"
+              th:text="${autor.nome}"
+              >Nome do Autor</span
+            >
+            <span
+              class="author-meta"
+              th:text="${autor.tipo != null ? (' · ' + autor.tipo) : ''}"
+            ></span>
+            <span
+              class="author-meta"
+              th:if="${autor.partido != null and autor.uf != null}"
+              th:text="${' · ' + autor.partido + '/' + autor.uf}"
+            ></span>
+          </div>
+          <span th:if="${autor.proponente}" class="badge badge-camara"
+            >Proponente</span
+          >
+        </div>
+      </div>
+
+      <!-- Tramitação ──────────────────────────────────────────────────── -->
+      <div
+        class="card"
+        data-testid="proposicao-tab-tramitacao"
+        th:if="${!page.tramitacoes.isEmpty()}"
+      >
+        <div
+          class="section-title"
+          th:text="${'Histórico de Tramitação (' + page.tramitacoes.size() + ')'}"
+        >
+          Histórico de Tramitação
+        </div>
+
+        <div class="timeline">
+          <div class="timeline-item" th:each="tram : ${page.tramitacoes}">
+            <div class="timeline-dot"></div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                margin-bottom: 0.25rem;
+              "
+            >
+              <span class="timeline-date" th:text="${tram.dataFormatada}"
+                >01/01/2024</span
+              >
+              <span
+                th:if="${tram.siglaOrgao != null}"
+                class="badge badge-neutral"
+                th:text="${tram.siglaOrgao}"
+                >CCJ</span
+              >
+            </div>
+            <p class="timeline-desc" th:text="${tram.descricao}">
+              Descrição da tramitação.
+            </p>
+            <p
+              class="timeline-desp"
+              th:if="${tram.despacho != null and !#strings.isEmpty(tram.despacho)}"
+              th:text="${tram.despacho}"
+            ></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Temas ───────────────────────────────────────────────────────── -->
+      <div
+        class="card"
+        data-testid="proposicao-tab-temas"
+        th:if="${!page.temas.isEmpty() or !page.keywords.isEmpty()}"
+      >
+        <div class="section-title">Temas e Classificações</div>
+        <div class="keywords" th:if="${!page.temas.isEmpty()}">
+          <span
+            th:each="tema : ${page.temas}"
+            style="background: #dbeafe; color: #1e40af"
+            class="keyword-badge"
+            th:text="${tema}"
+            >Tema</span
+          >
+        </div>
+        <div
+          class="keywords"
+          th:if="${!page.keywords.isEmpty()}"
+          style="margin-top: 0.5rem"
+        >
+          <span
+            th:each="kw : ${page.keywords}"
+            class="keyword-badge"
+            th:text="${kw}"
+            >palavra-chave</span
+          >
+        </div>
+      </div>
+
+      <!-- Dado JSON embutido para hidratação Vue ───────────────────────── -->
+      <script
+        th:if="${page.proposicaoJsonEmbutido != null and !#strings.isEmpty(page.proposicaoJsonEmbutido)}"
+        type="application/json"
+        id="__proposicao_data__"
+        th:utext="${page.proposicaoJsonEmbutido}"
+      ></script>
+
+      <!-- Nota: abas Votações, Documentos, Relacionadas são carregadas dinamicamente pelo Vue -->
+      <p
+        style="
+          font-size: 0.75rem;
+          color: #9ca3af;
+          text-align: center;
+          margin-top: 2rem;
+        "
+      >
+        Página gerada em <span th:text="${page.geradoEm}"></span> ·
+        <a href="/proposicoes">Ver todas as proposições</a>
+      </p>
+    </div>
+  </body>
+</html>

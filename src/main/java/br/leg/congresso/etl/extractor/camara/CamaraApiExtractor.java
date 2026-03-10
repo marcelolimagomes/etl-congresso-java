@@ -1,8 +1,21 @@
 package br.leg.congresso.etl.extractor.camara;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
 import br.leg.congresso.etl.domain.Proposicao;
 import br.leg.congresso.etl.domain.Tramitacao;
 import br.leg.congresso.etl.extractor.camara.dto.CamaraProposicaoDTO;
+import br.leg.congresso.etl.extractor.camara.dto.CamaraRelacionadaDTO;
 import br.leg.congresso.etl.extractor.camara.dto.CamaraTramitacaoDTO;
 import br.leg.congresso.etl.extractor.camara.mapper.CamaraProposicaoMapper;
 import br.leg.congresso.etl.transformer.TipoProposicaoNormalizer;
@@ -10,19 +23,6 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Extrai proposições da Câmara via API REST para carga incremental.
@@ -51,7 +51,8 @@ public class CamaraApiExtractor {
         List<Proposicao> all = new ArrayList<>();
         for (String sigla : tiposAceitos.split(",")) {
             sigla = sigla.trim();
-            if (sigla.isEmpty()) continue;
+            if (sigla.isEmpty())
+                continue;
             log.debug("Buscando tipo {} entre {} e {}", sigla, dataInicio, dataFim);
             List<Proposicao> paginados = fetchAllPages(sigla, dataInicio, dataFim);
             all.addAll(paginados);
@@ -71,7 +72,8 @@ public class CamaraApiExtractor {
         List<CamaraProposicaoDTO> all = new ArrayList<>();
         for (String sigla : tiposAceitos.split(",")) {
             sigla = sigla.trim();
-            if (sigla.isEmpty()) continue;
+            if (sigla.isEmpty())
+                continue;
             List<CamaraProposicaoDTO> paginados = fetchAllPagesRaw(sigla, dataInicio, dataFim);
             all.addAll(paginados);
         }
@@ -104,7 +106,8 @@ public class CamaraApiExtractor {
             boolean hasNext = response.getLinks() != null && response.getLinks().stream()
                     .anyMatch(l -> "next".equals(l.getRel()) && l.getHref() != null && !l.getHref().isEmpty());
 
-            if (!hasNext || response.getDados().size() < PAGE_SIZE) break;
+            if (!hasNext || response.getDados().size() < PAGE_SIZE)
+                break;
             pagina++;
         }
 
@@ -130,7 +133,8 @@ public class CamaraApiExtractor {
             boolean hasNext = response.getLinks() != null && response.getLinks().stream()
                     .anyMatch(l -> "next".equals(l.getRel()) && l.getHref() != null && !l.getHref().isEmpty());
 
-            if (!hasNext || response.getDados().size() < PAGE_SIZE) break;
+            if (!hasNext || response.getDados().size() < PAGE_SIZE)
+                break;
             pagina++;
         }
 
@@ -160,7 +164,7 @@ public class CamaraApiExtractor {
     @RateLimiter(name = "camaraApi")
     @Retry(name = "camaraApi")
     private CamaraProposicaoDTO.ListResponse fetchPage(String siglaTipo, LocalDate dataInicio,
-                                                        LocalDate dataFim, int pagina) {
+            LocalDate dataFim, int pagina) {
         try {
             return camaraWebClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -235,6 +239,35 @@ public class CamaraApiExtractor {
                     .toList();
         } catch (Exception e) {
             log.warn("Não foi possível buscar tramitações para idOrigem={}: {}", idOrigem, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Busca proposições relacionadas à proposição informada.
+     * GET /api/v2/proposicoes/{id}/relacionadas
+     *
+     * @param camaraId ID da proposição na API da Câmara
+     * @return lista de DTOs de proposições relacionadas; lista vazia em caso de
+     *         erro
+     */
+    @RateLimiter(name = "camaraApi")
+    @Retry(name = "camaraApi")
+    public List<CamaraRelacionadaDTO> fetchRelacionadas(String camaraId) {
+        try {
+            CamaraRelacionadaDTO.ListResponse response = camaraWebClient.get()
+                    .uri("/api/v2/proposicoes/{id}/relacionadas", camaraId)
+                    .retrieve()
+                    .bodyToMono(CamaraRelacionadaDTO.ListResponse.class)
+                    .block();
+
+            if (response == null || response.getDados() == null) {
+                return Collections.emptyList();
+            }
+
+            return response.getDados();
+        } catch (Exception e) {
+            log.warn("Não foi possível buscar relacionadas para camaraId={}: {}", camaraId, e.getMessage());
             return Collections.emptyList();
         }
     }

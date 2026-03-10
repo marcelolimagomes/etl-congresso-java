@@ -1,0 +1,260 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+  <!--
+  Fragmento: head-seo
+  Uso: <th:block th:replace="~{pages/fragments/head-seo :: head(${page})}"/>
+-->
+  <head th:fragment="head(page)">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title th:text="${page.seoTitle}">Proposição Legislativa</title>
+    <meta name="description" th:content="${page.seoDescription}" />
+    <link rel="canonical" th:href="${page.canonicalUrl}" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" th:content="${page.seoTitle}" />
+    <meta property="og:description" th:content="${page.seoDescription}" />
+    <meta property="og:url" th:content="${page.canonicalUrl}" />
+    <meta
+      property="og:image"
+      content="https://www.translegis.com.br/og-image.png"
+    />
+    <meta property="og:site_name" content="Transparência Legislativa" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" th:content="${page.seoTitle}" />
+    <meta name="twitter:description" th:content="${page.seoDescription}" />
+    <meta
+      name="twitter:image"
+      content="https://www.translegis.com.br/og-image.png"
+    />
+
+    <!-- Schema.org JSON-LD: Legislation -->
+    <script
+      type="application/ld+json"
+      th:utext="${page.schemaOrgLegislationJson}"
+    ></script>
+
+    <!-- Schema.org JSON-LD: BreadcrumbList -->
+    <script
+      type="application/ld+json"
+      th:utext="${page.schemaOrgBreadcrumbJson}"
+    ></script>
+
+    <!-- CSS do Nuxt UI / Tailwind (disponível após hidratação do SPA) -->
+    <link rel="preconnect" href="https://www.translegis.com.br" />
+
+    <!-- Estilos mínimos para renderização sem JavaScript -->
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #111;
+        background: #f9fafb;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      h1 {
+        color: #1a4480;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+      }
+      h2 {
+        color: #111;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-camara {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-senado {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .badge-tramitando {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .badge-encerrada {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .badge-neutral {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 1rem;
+      }
+      .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      .keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      .keyword-badge {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.15rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+      }
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #111;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+      }
+      dl.info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+      dl.info-grid dt {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+      }
+      dl.info-grid dd {
+        font-size: 0.95rem;
+        color: #111;
+        margin: 0;
+      }
+      .author-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .author-item:last-child {
+        border-bottom: none;
+      }
+      .author-name {
+        font-weight: 500;
+        color: #1a4480;
+      }
+      .author-meta {
+        font-size: 0.8rem;
+        color: #6b7280;
+      }
+      .timeline {
+        border-left: 2px solid #bfdbfe;
+        margin-left: 0.75rem;
+      }
+      .timeline-item {
+        position: relative;
+        padding: 0 0 1.5rem 2rem;
+      }
+      .timeline-item:last-child {
+        padding-bottom: 0;
+      }
+      .timeline-dot {
+        position: absolute;
+        left: -0.75rem;
+        top: 0;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #3b82f6;
+      }
+      .timeline-date {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #111;
+      }
+      .timeline-desc {
+        font-size: 0.9rem;
+        color: #374151;
+        margin-top: 0.25rem;
+      }
+      .timeline-desp {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+        font-style: italic;
+      }
+      nav.breadcrumb {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 1.5rem;
+      }
+      nav.breadcrumb a {
+        color: #3b82f6;
+        text-decoration: none;
+      }
+      nav.breadcrumb a:hover {
+        text-decoration: underline;
+      }
+      nav.breadcrumb span.sep {
+        margin: 0 0.4rem;
+      }
+      .btn-primary {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        text-decoration: none;
+      }
+      .btn-primary:hover {
+        background: #dbeafe;
+      }
+      .ementa-text {
+        color: #374151;
+        line-height: 1.6;
+      }
+      .ementa-detalhada {
+        color: #374151;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        margin-top: 0.75rem;
+      }
+      @media (max-width: 640px) {
+        dl.info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+</html>

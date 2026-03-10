@@ -1,17 +1,34 @@
 package br.leg.congresso.etl.domain;
 
-import br.leg.congresso.etl.domain.enums.CasaLegislativa;
-import br.leg.congresso.etl.domain.enums.TipoProposicao;
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import br.leg.congresso.etl.domain.enums.CasaLegislativa;
+import br.leg.congresso.etl.domain.enums.TipoProposicao;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 /**
  * Entidade central do ETL.
@@ -19,13 +36,8 @@ import java.util.UUID;
  * Chave natural: (casa, sigla, numero, ano)
  */
 @Entity
-@Table(
-    name = "proposicao",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uq_proposicao_natural",
-        columnNames = {"casa", "sigla", "numero", "ano"}
-    )
-)
+@Table(name = "proposicao", uniqueConstraints = @UniqueConstraint(name = "uq_proposicao_natural", columnNames = {
+        "casa", "sigla", "numero", "ano" }))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -62,7 +74,7 @@ public class Proposicao {
     @Column(length = 500)
     private String situacao;
 
-    @Column(name = "despacho_atual", length = 1000)
+    @Column(name = "despacho_atual", columnDefinition = "TEXT")
     private String despachoAtual;
 
     @Column(name = "data_apresentacao")
@@ -112,7 +124,9 @@ public class Proposicao {
     @Builder.Default
     private List<Tramitacao> tramitacoes = new ArrayList<>();
 
-    /** FK para silver.camara_proposicao — rastreabilidade bidirecional Silver→Gold */
+    /**
+     * FK para silver.camara_proposicao — rastreabilidade bidirecional Silver→Gold
+     */
     @Builder.Default
     @Column(name = "silver_camara_id")
     private UUID silverCamaraId = null;

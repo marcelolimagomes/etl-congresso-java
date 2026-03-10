@@ -1,5 +1,12 @@
 package br.leg.congresso.etl.orchestrator;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import br.leg.congresso.etl.domain.EtlJobControl;
 import br.leg.congresso.etl.domain.enums.CasaLegislativa;
 import br.leg.congresso.etl.domain.enums.TipoExecucao;
@@ -18,12 +25,6 @@ import br.leg.congresso.etl.promoter.SilverToGoldService;
 import br.leg.congresso.etl.service.EtlJobControlService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Orquestrador de carga incremental para Câmara e Senado.
@@ -56,26 +57,26 @@ public class IncrementalLoadOrchestrator {
      */
     public EtlJobControl executarCamara(LocalDate dataInicio, LocalDate dataFim) {
         LocalDate inicio = dataInicio != null ? dataInicio : LocalDate.now().minusDays(camaraLookbackDays);
-        LocalDate fim    = dataFim    != null ? dataFim    : LocalDate.now();
+        LocalDate fim = dataFim != null ? dataFim : LocalDate.now();
 
         log.info("Carga incremental Câmara: {} a {}", inicio, fim);
 
         EtlJobControl job = jobControlService.iniciar(
-            CasaLegislativa.CAMARA,
-            TipoExecucao.INCREMENTAL,
-            Map.of("dataInicio", inicio.toString(), "dataFim", fim.toString())
-        );
+                CasaLegislativa.CAMARA,
+                TipoExecucao.INCREMENTAL,
+                Map.of("dataInicio", inicio.toString(), "dataFim", fim.toString()));
 
         try {
             List<CamaraProposicaoDTO> proposicoesRaw = camaraApiExtractor.extractRawByDateRange(inicio, fim);
             log.info("[Silver] Câmara incremental raw: {} proposições encontradas", proposicoesRaw.size());
 
             List<SilverCamaraProposicao> silver = proposicoesRaw.stream()
-                .map(camaraMapper::apiDtoToSilver)
-                .toList();
+                    .map(camaraMapper::apiDtoToSilver)
+                    .toList();
 
             silverCamaraLoader.carregarEmLotes(silver, job);
             silverEnrichmentService.enriquecerTramitacoesCamara(silver);
+            silverEnrichmentService.enriquecerRelacionadasCamara(silver);
 
             // Gold é alimentado exclusivamente via promoção Silver → Gold
             silverToGoldService.promoverCamara();
@@ -94,27 +95,32 @@ public class IncrementalLoadOrchestrator {
      */
     public EtlJobControl executarSenado(LocalDate dataInicio, LocalDate dataFim) {
         LocalDate inicio = dataInicio != null ? dataInicio : LocalDate.now().minusDays(senadoLookbackDays);
-        LocalDate fim    = dataFim    != null ? dataFim    : LocalDate.now();
+        LocalDate fim = dataFim != null ? dataFim : LocalDate.now();
 
         log.info("Carga incremental Senado: {} a {}", inicio, fim);
 
         EtlJobControl job = jobControlService.iniciar(
-            CasaLegislativa.SENADO,
-            TipoExecucao.INCREMENTAL,
-            Map.of("dataInicio", inicio.toString(), "dataFim", fim.toString())
-        );
+                CasaLegislativa.SENADO,
+                TipoExecucao.INCREMENTAL,
+                Map.of("dataInicio", inicio.toString(), "dataFim", fim.toString()));
 
         try {
             List<SenadoMateriaDTO.Materia> materiasRaw = senadoApiExtractor.extractRawByDateRange(inicio, fim);
             log.info("[Silver] Senado incremental raw: {} matérias encontradas", materiasRaw.size());
 
             List<SilverSenadoMateria> silver = materiasRaw.stream()
-                .map(senadoMapper::materiaToSilver)
-                .toList();
+                    .map(senadoMapper::materiaToSilver)
+                    .toList();
 
             silverSenadoLoader.carregarEmLotes(silver, job);
             silverEnrichmentService.enriquecerDetalhesSenado();
             silverEnrichmentService.enriquecerMovimentacoesSenado(silver);
+            silverEnrichmentService.enriquecerAutoriasSenado(silver);
+            silverEnrichmentService.enriquecerRelatoriasSenado(silver);
+            silverEnrichmentService.enriquecerEmendasSenado(silver);
+            silverEnrichmentService.enriquecerDocumentosSenado(silver);
+            silverEnrichmentService.enriquecerPrazosSenado(silver);
+            silverEnrichmentService.enriquecerVotacoesSenado(silver);
 
             // Gold é alimentado exclusivamente via promoção Silver → Gold
             silverToGoldService.promoverSenado();

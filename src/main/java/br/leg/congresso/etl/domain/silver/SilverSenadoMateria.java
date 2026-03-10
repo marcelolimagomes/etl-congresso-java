@@ -1,29 +1,41 @@
 package br.leg.congresso.etl.domain.silver;
 
-import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 /**
  * Entidade Silver para matérias do Senado.
  * Combina campos da pesquisa/lista com os campos do endpoint de detalhe.
  *
- * Princípio Silver: dados persistidos exatamente como vieram da API — sem normalização.
+ * Princípio Silver: dados persistidos exatamente como vieram da API — sem
+ * normalização.
  */
 @Entity
-@Table(
-    schema = "silver",
-    name = "senado_materia",
-    uniqueConstraints = @UniqueConstraint(name = "uq_silver_senado_materia_codigo", columnNames = "codigo")
-)
+@Table(schema = "silver", name = "senado_materia", uniqueConstraints = @UniqueConstraint(name = "uq_silver_senado_materia_codigo", columnNames = "codigo"))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -56,7 +68,9 @@ public class SilverSenadoMateria {
     @Builder.Default
     private String origemCarga = "PESQUISA";
 
-    /** Flag de controle: FALSE = pendente promoção para Gold; TRUE = já promovido */
+    /**
+     * Flag de controle: FALSE = pendente promoção para Gold; TRUE = já promovido
+     */
     @Column(name = "gold_sincronizado", nullable = false)
     @Builder.Default
     private boolean goldSincronizado = false;
@@ -117,7 +131,7 @@ public class SilverSenadoMateria {
     @Column(name = "det_indexacao", columnDefinition = "TEXT")
     private String detIndexacao;
 
-    @Column(name = "det_casa_iniciadora", length = 10)
+    @Column(name = "det_casa_iniciadora", length = 100)
     private String detCasaIniciadora;
 
     @Column(name = "det_indicador_complementar", length = 10)

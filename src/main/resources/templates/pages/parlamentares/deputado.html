@@ -1,0 +1,329 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+  <!--
+  Template: perfil de deputado federal.
+  Gerado pelo etl-congresso-java (Thymeleaf standalone).
+  Serve como página estática pré-renderizada para SEO.
+-->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title th:text="${page.seoTitle}">Deputado Federal</title>
+    <meta name="description" th:content="${page.seoDescription}" />
+    <link rel="canonical" th:href="${page.canonicalUrl}" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" th:content="${page.seoTitle}" />
+    <meta property="og:description" th:content="${page.seoDescription}" />
+    <meta property="og:url" th:content="${page.canonicalUrl}" />
+    <meta
+      property="og:image"
+      th:content="${page.urlFoto != null ? page.urlFoto : 'https://www.translegis.com.br/og-image.png'}"
+    />
+    <meta property="og:site_name" content="Transparência Legislativa" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" th:content="${page.seoTitle}" />
+    <meta name="twitter:description" th:content="${page.seoDescription}" />
+
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: #111;
+        background: #f9fafb;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      h1 {
+        color: #1a4480;
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+      }
+      h2 {
+        color: #111;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-camara {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #111;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+      }
+      dl.info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+      dl.info-grid dt {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+      }
+      dl.info-grid dd {
+        font-size: 0.95rem;
+        color: #111;
+        margin: 0;
+      }
+      nav.breadcrumb {
+        font-size: 0.875rem;
+        color: #9ca3af;
+        margin-bottom: 1.5rem;
+      }
+      nav.breadcrumb a {
+        color: #3b82f6;
+        text-decoration: none;
+      }
+      nav.breadcrumb span.sep {
+        margin: 0 0.4rem;
+      }
+      .foto-perfil {
+        width: 120px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        border: 2px solid #e5e7eb;
+      }
+      .header-flex {
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .header-info {
+        flex: 1;
+      }
+      .social-links a {
+        display: inline-block;
+        margin-right: 0.5rem;
+        font-size: 0.85rem;
+        color: #3b82f6;
+        text-decoration: none;
+        word-break: break-all;
+      }
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+      }
+      .tag {
+        background: #f3f4f6;
+        color: #374151;
+        padding: 0.15rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+      }
+      @media (max-width: 640px) {
+        dl.info-grid {
+          grid-template-columns: 1fr;
+        }
+        .header-flex {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="/">Início</a>
+        <span class="sep">/</span>
+        <a href="/parlamentares/deputados">Deputados</a>
+        <span class="sep">/</span>
+        <span th:text="${page.nomeParlamentar}">Deputado(a)</span>
+      </nav>
+
+      <!-- Cabeçalho -->
+      <div class="card">
+        <div class="header-flex">
+          <img
+            th:if="${page.urlFoto != null}"
+            th:src="${page.urlFoto}"
+            th:alt="${page.nomeParlamentar}"
+            class="foto-perfil"
+          />
+          <div class="header-info">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+                margin-bottom: 0.75rem;
+              "
+            >
+              <h1 th:text="${page.nomeParlamentar}">Deputado(a)</h1>
+              <span class="badge badge-camara">Câmara dos Deputados</span>
+              <span
+                th:if="${page.situacao != null}"
+                class="badge"
+                style="background: #f3f4f6; color: #374151"
+                th:text="${page.situacao}"
+              ></span>
+            </div>
+
+            <!-- Partido / UF -->
+            <p style="font-size: 1rem; color: #374151; margin: 0 0 0.25rem 0">
+              <strong th:text="${page.partido}">Partido</strong>
+              <span th:if="${page.uf != null}">
+                / <span th:text="${page.uf}">UF</span>
+              </span>
+            </p>
+
+            <!-- Nome civil (se diferente) -->
+            <p
+              th:if="${page.nomeCivil != null and page.nomeCivil != page.nomeParlamentar}"
+              style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0"
+            >
+              Nome civil: <span th:text="${page.nomeCivil}"></span>
+            </p>
+
+            <!-- Condição eleitoral -->
+            <p
+              th:if="${page.condicaoEleitoral != null}"
+              style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0"
+              th:text="${page.condicaoEleitoral}"
+            ></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dados pessoais -->
+      <div class="card" data-testid="deputado-dados-pessoais">
+        <h2 class="section-title">Dados Pessoais</h2>
+        <dl class="info-grid">
+          <div th:if="${page.dataNascimento != null}">
+            <dt>Data de nascimento</dt>
+            <dd th:text="${page.dataNascimento}"></dd>
+          </div>
+          <div th:if="${page.localNascimento != null}">
+            <dt>Local de nascimento</dt>
+            <dd th:text="${page.localNascimento}"></dd>
+          </div>
+          <div th:if="${page.escolaridade != null}">
+            <dt>Escolaridade</dt>
+            <dd th:text="${page.escolaridade}"></dd>
+          </div>
+          <div th:if="${page.primeiraLegislatura != null}">
+            <dt>Primeira legislatura</dt>
+            <dd th:text="${page.primeiraLegislatura}"></dd>
+          </div>
+          <div th:if="${page.ultimaLegislatura != null}">
+            <dt>Última legislatura</dt>
+            <dd th:text="${page.ultimaLegislatura}"></dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Contato e gabinete -->
+      <div
+        class="card"
+        th:if="${page.email != null or page.gabineteNome != null or page.gabineteTelefone != null}"
+      >
+        <h2 class="section-title">Contato</h2>
+        <dl class="info-grid">
+          <div th:if="${page.email != null}">
+            <dt>E-mail</dt>
+            <dd>
+              <a
+                th:href="${'mailto:' + page.email}"
+                th:text="${page.email}"
+              ></a>
+            </dd>
+          </div>
+          <div th:if="${page.gabineteTelefone != null}">
+            <dt>Telefone</dt>
+            <dd th:text="${page.gabineteTelefone}"></dd>
+          </div>
+          <div th:if="${page.gabineteNome != null}">
+            <dt>Gabinete</dt>
+            <dd th:text="${page.gabineteNome}"></dd>
+          </div>
+          <div th:if="${page.gabineteEndereco != null}">
+            <dt>Endereço</dt>
+            <dd th:text="${page.gabineteEndereco}"></dd>
+          </div>
+          <div th:if="${page.urlWebsite != null}">
+            <dt>Website</dt>
+            <dd>
+              <a
+                th:href="${page.urlWebsite}"
+                target="_blank"
+                rel="noopener"
+                th:text="${page.urlWebsite}"
+              ></a>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Redes sociais -->
+      <div
+        class="card"
+        th:if="${page.redesSociais != null and !page.redesSociais.isEmpty()}"
+      >
+        <h2 class="section-title">Redes Sociais</h2>
+        <div class="social-links">
+          <a
+            th:each="url : ${page.redesSociais}"
+            th:href="${url}"
+            th:text="${url}"
+            target="_blank"
+            rel="noopener noreferrer"
+          ></a>
+        </div>
+      </div>
+
+      <!-- Rodapé -->
+      <footer
+        style="
+          margin-top: 2rem;
+          font-size: 0.8rem;
+          color: #9ca3af;
+          text-align: center;
+        "
+      >
+        Página gerada em
+        <span th:text="${page.geradoEm}"></span>
+        &bull;
+        <a href="https://www.translegis.com.br" style="color: #9ca3af"
+          >Transparência Legislativa</a
+        >
+      </footer>
+    </div>
+  </body>
+</html>

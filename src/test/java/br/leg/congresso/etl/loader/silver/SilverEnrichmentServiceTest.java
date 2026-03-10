@@ -1,5 +1,31 @@
 package br.leg.congresso.etl.loader.silver;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import br.leg.congresso.etl.domain.EtlJobControl;
 import br.leg.congresso.etl.domain.enums.CasaLegislativa;
 import br.leg.congresso.etl.domain.enums.TipoExecucao;
@@ -13,66 +39,102 @@ import br.leg.congresso.etl.extractor.senado.dto.SenadoMovimentacaoDTO;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
 import br.leg.congresso.etl.service.EtlJobControlService;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("SilverEnrichmentService — enriquecimento Silver com fontes secundárias")
 class SilverEnrichmentServiceTest {
 
-    @Mock private SilverSenadoMateriaRepository silverSenadoRepository;
-    @Mock private SilverCamaraProposicaoRepository silverCamaraRepository;
-    @Mock private SenadoApiExtractor senadoApiExtractor;
-    @Mock private CamaraApiExtractor camaraApiExtractor;
-    @Mock private SilverCamaraTramitacaoLoader tramitacaoLoader;
-    @Mock private SilverSenadoMovimentacaoLoader movimentacaoLoader;
-    @Mock private EtlJobControlService jobControlService;
+    @Mock
+    private SilverSenadoMateriaRepository silverSenadoRepository;
+    @Mock
+    private SilverCamaraProposicaoRepository silverCamaraRepository;
+    @Mock
+    private SenadoApiExtractor senadoApiExtractor;
+    @Mock
+    private CamaraApiExtractor camaraApiExtractor;
+    @Mock
+    private SilverCamaraTramitacaoLoader tramitacaoLoader;
+    @Mock
+    private SilverSenadoMovimentacaoLoader movimentacaoLoader;
+    @Mock
+    private SilverSenadoAutoriaLoader autoriaLoader;
+    @Mock
+    private SilverSenadoRelatoriaLoader relatoriaLoader;
+    @Mock
+    private SilverCamaraRelacionadasLoader relacionadasLoader;
+    @Mock
+    private SilverSenadoEmendaLoader emendaLoader;
+    @Mock
+    private SilverSenadoDocumentoLoader documentoLoader;
+    @Mock
+    private SilverSenadoPrazoLoader prazoLoader;
+    @Mock
+    private SilverSenadoVotacaoLoader votacaoLoader;
+    @Mock
+    private EtlJobControlService jobControlService;
+    @Mock
+    private SilverSenadoEnriquecedor senadoEnriquecedor;
 
-    @InjectMocks
+    /**
+     * Executor síncrono: executa runnable inline, sem threads extras — ideal para
+     * testes.
+     */
+    private final Executor directExecutor = Runnable::run;
+
     private SilverEnrichmentService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new SilverEnrichmentService(
+                silverSenadoRepository,
+                silverCamaraRepository,
+                senadoApiExtractor,
+                camaraApiExtractor,
+                tramitacaoLoader,
+                movimentacaoLoader,
+                autoriaLoader,
+                relatoriaLoader,
+                relacionadasLoader,
+                emendaLoader,
+                documentoLoader,
+                prazoLoader,
+                votacaoLoader,
+                jobControlService,
+                new ObjectMapper(),
+                directExecutor,
+                senadoEnriquecedor);
+    }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private SilverSenadoMateria materiaComCodigo(String codigo) {
         return SilverSenadoMateria.builder()
-            .id(UUID.randomUUID())
-            .codigo(codigo)
-            .sigla("PL")
-            .numero("1")
-            .ano(2024)
-            .build();
+                .id(UUID.randomUUID())
+                .codigo(codigo)
+                .sigla("PL")
+                .numero("1")
+                .ano(2024)
+                .build();
     }
 
     private SilverCamaraProposicao proposicaoComId(String camaraId) {
         return SilverCamaraProposicao.builder()
-            .id(UUID.randomUUID())
-            .camaraId(camaraId)
-            .siglaTipo("PL")
-            .numero(1)
-            .ano(2024)
-            .build();
+                .id(UUID.randomUUID())
+                .camaraId(camaraId)
+                .siglaTipo("PL")
+                .numero(1)
+                .ano(2024)
+                .build();
     }
 
     private SenadoDetalheDTO detalheDto(String siglaCasa) {
+        SenadoDetalheDTO.IdentificacaoMateria identif = new SenadoDetalheDTO.IdentificacaoMateria();
+        identif.setSiglaCasaIdentificacao(siglaCasa);
+        identif.setSiglaSubtipo("PL");
+        identif.setDescricaoSubtipo("Projeto de Lei");
+        identif.setIndicadorTramitando("Sim");
+
         SenadoDetalheDTO.DadosBasicos dados = new SenadoDetalheDTO.DadosBasicos();
-        dados.setSiglaCasaIdentificacao(siglaCasa);
-        dados.setSiglaSubtipo("PL");
-        dados.setDescricaoSubtipo("Projeto de Lei");
-        dados.setIndicadorTramitando("Sim");
         dados.setSiglaCasaIniciadora("SF");
 
         SenadoDetalheDTO.Natureza natureza = new SenadoDetalheDTO.Natureza();
@@ -83,6 +145,7 @@ class SilverEnrichmentServiceTest {
         casaOrigem.setSiglaCasaOrigem("SF");
 
         SenadoDetalheDTO.MateriaDetalhe materiaDetalhe = new SenadoDetalheDTO.MateriaDetalhe();
+        materiaDetalhe.setIdentificacaoMateria(identif);
         materiaDetalhe.setDadosBasicosMateria(dados);
         materiaDetalhe.setNaturezaMateria(natureza);
         materiaDetalhe.setCasaOrigem(casaOrigem);
@@ -104,9 +167,14 @@ class SilverEnrichmentServiceTest {
         SenadoDetalheDTO detalhe = detalheDto("SF");
 
         when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNull())
-            .thenReturn(List.of(materia));
+                .thenReturn(List.of(materia));
         when(senadoApiExtractor.fetchRawDetalhe("12345")).thenReturn(detalhe);
-        when(silverSenadoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        // Simula enriquecedor gerenciado: chama o consumer na entidade e retorna true
+        doAnswer(invocation -> {
+            Consumer<SilverSenadoMateria> enricher = invocation.getArgument(1);
+            enricher.accept(materia);
+            return true;
+        }).when(senadoEnriquecedor).enriquecer(eq("12345"), any());
 
         int resultado = service.enriquecerDetalhesSenado();
 
@@ -115,20 +183,20 @@ class SilverEnrichmentServiceTest {
         assertThat(materia.getDetSiglaSubtipo()).isEqualTo("PL");
         assertThat(materia.getDetNaturezaNome()).isEqualTo("Ordinária");
         assertThat(materia.getDetSiglaCasaOrigem()).isEqualTo("SF");
-        verify(silverSenadoRepository).save(materia);
+        verify(senadoEnriquecedor).enriquecer(eq("12345"), any());
     }
 
     @Test
     @DisplayName("não deve chamar extrator quando não há registros pendentes")
     void enriquecerDetalhesSenado_semPendentes_naoChama() {
         when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNull())
-            .thenReturn(Collections.emptyList());
+                .thenReturn(Collections.emptyList());
 
         int resultado = service.enriquecerDetalhesSenado();
 
         assertThat(resultado).isEqualTo(0);
         verifyNoInteractions(senadoApiExtractor);
-        verify(silverSenadoRepository, never()).save(any());
+        verifyNoInteractions(senadoEnriquecedor);
     }
 
     @Test
@@ -139,16 +207,16 @@ class SilverEnrichmentServiceTest {
         SilverSenadoMateria ok2 = materiaComCodigo("222");
 
         when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNull())
-            .thenReturn(List.of(ok1, erro, ok2));
+                .thenReturn(List.of(ok1, erro, ok2));
         when(senadoApiExtractor.fetchRawDetalhe("111")).thenReturn(detalheDto("SF"));
         when(senadoApiExtractor.fetchRawDetalhe("999")).thenThrow(new RuntimeException("API Error"));
         when(senadoApiExtractor.fetchRawDetalhe("222")).thenReturn(detalheDto("CD"));
-        when(silverSenadoRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(senadoEnriquecedor.enriquecer(any(), any())).thenReturn(true);
 
         int resultado = service.enriquecerDetalhesSenado();
 
         assertThat(resultado).isEqualTo(2);
-        verify(silverSenadoRepository, times(2)).save(any());
+        verify(senadoEnriquecedor, times(2)).enriquecer(any(), any());
     }
 
     // ─── Testes de enriquecerTramitacoesCamara ────────────────────────────────
@@ -232,5 +300,78 @@ class SilverEnrichmentServiceTest {
         service.applyDetalhe(materia, detalhe);
 
         assertThat(materia.getDetCasaIniciadora()).isEqualTo("Senado Federal");
+    }
+
+    @Test
+    @DisplayName("applyDetalhe deve aceitar nomeCasaIniciadora com mais de 10 caracteres sem truncamento (fix 6.2)")
+    void applyDetalhe_nomeCasaIniciadoraLonga_naoTrunca() {
+        SilverSenadoMateria materia = materiaComCodigo("456");
+        SenadoDetalheDTO detalhe = detalheDto("SF");
+        detalhe.getDetalheMateria().getMateria().getDadosBasicosMateria().setSiglaCasaIniciadora(null);
+        detalhe.getDetalheMateria().getMateria().getDadosBasicosMateria().setNomeCasaIniciadora("Câmara dos Deputados");
+
+        service.applyDetalhe(materia, detalhe);
+
+        // Campo deve conter o valor completo — sem truncamento nos 10 primeiros chars
+        assertThat(materia.getDetCasaIniciadora()).isEqualTo("Câmara dos Deputados");
+        assertThat(materia.getDetCasaIniciadora().length()).isGreaterThan(10);
+    }
+
+    // ─── Testes de enriquecerTudo (Phase 9) ──────────────────────────────────
+
+    @Test
+    @DisplayName("enriquecerTudo deve invocar todos os enriquecimentos e retornar job finalizado")
+    void enriquecerTudo_invocaTodosOsMetodos() {
+        // repositories retornam listas vazias — nenhuma API real é chamada
+        when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNull())
+                .thenReturn(Collections.emptyList());
+        when(silverCamaraRepository.findAll())
+                .thenReturn(Collections.emptyList());
+        when(silverSenadoRepository.findAll())
+                .thenReturn(Collections.emptyList());
+        when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNotNull())
+                .thenReturn(Collections.emptyList());
+
+        EtlJobControl job = EtlJobControl.builder()
+                .id(UUID.randomUUID())
+                .build();
+        when(jobControlService.iniciar(
+                eq(CasaLegislativa.SENADO),
+                eq(TipoExecucao.ENRICHMENT),
+                any(Map.class)))
+                .thenReturn(job);
+        when(jobControlService.finalizar(job)).thenReturn(job);
+
+        EtlJobControl resultado = service.enriquecerTudo();
+
+        assertThat(resultado).isEqualTo(job);
+        // Job lifecycle
+        verify(jobControlService).iniciar(eq(CasaLegislativa.SENADO), eq(TipoExecucao.ENRICHMENT), any(Map.class));
+        verify(jobControlService).finalizar(job);
+
+        // Todas as consultas aos repositórios devem ter sido feitas
+        verify(silverSenadoRepository).findByDetSiglaCasaIdentificacaoIsNull();
+        verify(silverCamaraRepository, times(2)).findAll(); // tramitacoes + relacionadas
+        verify(silverSenadoRepository).findAll(); // movimentacoes
+        // Metodos que consultam findByDetSiglaCasaIdentificacaoIsNotNull:
+        // autorias + relatorias + emendas + documentos + prazos + votacoes = 6x
+        verify(silverSenadoRepository, times(6)).findByDetSiglaCasaIdentificacaoIsNotNull();
+    }
+
+    @Test
+    @DisplayName("enriquecerTudo deve marcar job como falho quando ocorre exceção")
+    void enriquecerTudo_excecaoMarcaJobFalho() {
+        EtlJobControl job = EtlJobControl.builder()
+                .id(UUID.randomUUID())
+                .build();
+        when(jobControlService.iniciar(any(), any(), any())).thenReturn(job);
+        when(silverSenadoRepository.findByDetSiglaCasaIdentificacaoIsNull())
+                .thenThrow(new RuntimeException("DB error"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> service.enriquecerTudo());
+
+        verify(jobControlService).falhar(eq(job), any());
+        verify(jobControlService, never()).finalizar(any());
     }
 }

@@ -1,13 +1,14 @@
 package br.leg.congresso.etl.transformer.silver;
 
-import br.leg.congresso.etl.domain.silver.SilverSenadoMateria;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import br.leg.congresso.etl.domain.silver.SilverSenadoMateria;
 
-@DisplayName("SilverSenadoHashGenerator — SHA-256 sobre campos fonte do Senado")
+@DisplayName("SilverSenadoHashGenerator — SHA-256 sobre campos fonte e metadados enriquecidos do Senado")
 class SilverSenadoHashGeneratorTest {
 
     private SilverSenadoHashGenerator generator;
@@ -19,21 +20,23 @@ class SilverSenadoHashGeneratorTest {
 
     private SilverSenadoMateria materiaBase() {
         return SilverSenadoMateria.builder()
-            .codigo("1234567")
-            .sigla("PL")
-            .numero("00042")
-            .ano(2024)
-            .ementa("Altera a Lei 9.394/1996 para fins educacionais")
-            .autor("Sen. Fulano de Tal")
-            .data("2024-03-15")
-            .identificacaoProcesso("PL nº 42/2024")
-            .detSiglaSubtipo("PL")
-            .detIndicadorTramitando("Sim")
-            .detIndexacao("educação; ensino fundamental")
-            .detCasaIniciadora("SF")
-            .detNaturezaNome("Ordinária")
-            .urlTexto("https://legis.senado.leg.br/textos/1234567")
-            .build();
+                .codigo("1234567")
+                .sigla("PL")
+                .numero("00042")
+                .ano(2024)
+                .ementa("Altera a Lei 9.394/1996 para fins educacionais")
+                .autor("Sen. Fulano de Tal")
+                .data("2024-03-15")
+                .identificacaoProcesso("PL nº 42/2024")
+                .detSiglaSubtipo("PL")
+                .detIndicadorTramitando("Sim")
+                .detIndexacao("educação; ensino fundamental")
+                .detCasaIniciadora("SF")
+                .detNaturezaNome("Ordinária")
+                .detClassificacoes("[{\"codigoClasse\":\"1\"}]")
+                .detOutrasInformacoes("[{\"nomeServico\":\"AutoriaMateria\"}]")
+                .urlTexto("https://legis.senado.leg.br/textos/1234567")
+                .build();
     }
 
     @Test
@@ -41,8 +44,8 @@ class SilverSenadoHashGeneratorTest {
     void hashTemTamanhoCorreto() {
         String hash = generator.generate(materiaBase());
         assertThat(hash)
-            .hasSize(64)
-            .matches("[a-f0-9]+");
+                .hasSize(64)
+                .matches("[a-f0-9]+");
     }
 
     @Test
@@ -74,11 +77,31 @@ class SilverSenadoHashGeneratorTest {
     }
 
     @Test
+    @DisplayName("mudança em detClassificacoes gera hash diferente")
+    void detClassificacoesAlteradaMudaHash() {
+        SilverSenadoMateria original = materiaBase();
+        SilverSenadoMateria alterado = materiaBase();
+        alterado.setDetClassificacoes("[{\"codigoClasse\":\"2\"}]");
+
+        assertThat(generator.generate(original)).isNotEqualTo(generator.generate(alterado));
+    }
+
+    @Test
+    @DisplayName("mudança em detOutrasInformacoes gera hash diferente")
+    void detOutrasInformacoesAlteradaMudaHash() {
+        SilverSenadoMateria original = materiaBase();
+        SilverSenadoMateria alterado = materiaBase();
+        alterado.setDetOutrasInformacoes("[{\"nomeServico\":\"TextoMateria\"}]");
+
+        assertThat(generator.generate(original)).isNotEqualTo(generator.generate(alterado));
+    }
+
+    @Test
     @DisplayName("campos nulos não lançam exceção — tratados como string vazia")
     void camposNulosNaoGeramExcecao() {
         SilverSenadoMateria vazia = SilverSenadoMateria.builder().build();
         assertThat(generator.generate(vazia))
-            .isNotNull()
-            .hasSize(64);
+                .isNotNull()
+                .hasSize(64);
     }
 }

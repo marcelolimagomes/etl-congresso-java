@@ -1,15 +1,5 @@
 package br.leg.congresso.etl.extractor.camara;
 
-import br.leg.congresso.etl.domain.Proposicao;
-import br.leg.congresso.etl.extractor.camara.dto.CamaraProposicaoCSVRow;
-import br.leg.congresso.etl.extractor.camara.mapper.CamaraProposicaoMapper;
-import br.leg.congresso.etl.transformer.TipoProposicaoNormalizer;
-import com.opencsv.bean.CsvToBeanBuilder;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,8 +10,21 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import com.opencsv.bean.CsvToBeanBuilder;
+
+import br.leg.congresso.etl.domain.Proposicao;
+import br.leg.congresso.etl.extractor.camara.dto.CamaraProposicaoCSVRow;
+import br.leg.congresso.etl.extractor.camara.mapper.CamaraProposicaoMapper;
+import br.leg.congresso.etl.transformer.TipoProposicaoNormalizer;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 /**
- * Extrai e transforma proposições a partir dos arquivos CSV da Câmara dos Deputados.
+ * Extrai e transforma proposições a partir dos arquivos CSV da Câmara dos
+ * Deputados.
  * Processa o CSV em lotes (chunks) para controle de memória.
  */
 @Slf4j
@@ -38,11 +41,12 @@ public class CamaraCSVExtractor {
      * Lê o CSV em chunks emitindo os CSVRows brutos (sem mapeamento para domínio).
      * Usado pela camada Silver para manter passthrough fiel à fonte.
      *
-     * @param csvPath       caminho do arquivo CSV
-     * @param rowConsumer   função que receberá cada chunk de CSVRows
+     * @param csvPath     caminho do arquivo CSV
+     * @param rowConsumer função que receberá cada chunk de CSVRows
      * @return total de linhas lidas (incluindo filtradas)
      */
-    public long extractRawInChunks(Path csvPath, Consumer<List<CamaraProposicaoCSVRow>> rowConsumer) throws IOException {
+    public long extractRawInChunks(Path csvPath, Consumer<List<CamaraProposicaoCSVRow>> rowConsumer)
+            throws IOException {
         log.info("[Silver] Iniciando extração raw CSV: {}", csvPath);
 
         long totalLidas = 0;
@@ -91,7 +95,8 @@ public class CamaraCSVExtractor {
             }
         }
 
-        log.info("[Silver] Extração raw concluída: {} lidas, {} aceitas, {} filtradas", totalLidas, totalAceitas, totalFiltradas);
+        log.info("[Silver] Extração raw concluída: {} lidas, {} aceitas, {} filtradas", totalLidas, totalAceitas,
+                totalFiltradas);
         return totalLidas;
     }
 
@@ -99,8 +104,8 @@ public class CamaraCSVExtractor {
      * Lê o CSV em chunks e invoca o consumer para cada lote.
      * Filtra apenas os tipos de proposição aceitos.
      *
-     * @param csvPath   caminho do arquivo CSV
-     * @param consumer  função que receberá cada chunk de proposições
+     * @param csvPath  caminho do arquivo CSV
+     * @param consumer função que receberá cada chunk de proposições
      * @return total de linhas lidas (incluindo filtradas)
      */
     public long extractInChunks(Path csvPath, Consumer<List<Proposicao>> consumer) throws IOException {
@@ -112,7 +117,8 @@ public class CamaraCSVExtractor {
 
         try (BufferedReader reader = Files.newBufferedReader(csvPath, StandardCharsets.UTF_8)) {
 
-            // Remove BOM UTF-8, quando presente, para não quebrar o mapeamento da primeira coluna (id)
+            // Remove BOM UTF-8, quando presente, para não quebrar o mapeamento da primeira
+            // coluna (id)
             reader.mark(1);
             int firstChar = reader.read();
             if (firstChar != '\uFEFF') {
@@ -166,7 +172,63 @@ public class CamaraCSVExtractor {
             }
         }
 
-        log.info("Extração CSV concluída: {} lidas, {} aceitas, {} filtradas", totalLidas, totalAceitas, totalFiltradas);
+        log.info("Extração CSV concluída: {} lidas, {} aceitas, {} filtradas", totalLidas, totalAceitas,
+                totalFiltradas);
+        return totalLidas;
+    }
+
+    /**
+     * Lê um CSV genérico em chunks, mapeado para o tipo de linha informado.
+     * Não aplica nenhum filtro — todas as linhas são emitidas.
+     * Separador padrão: ponto-e-vírgula (;), com tratamento de BOM UTF-8.
+     *
+     * @param csvPath  caminho do arquivo CSV
+     * @param rowType  classe do CSV row (anotada com @CsvBindByName)
+     * @param consumer função que receberá cada chunk de linhas
+     * @return total de linhas lidas
+     */
+    public <T> long extractRowsInChunks(Path csvPath, Class<T> rowType,
+            Consumer<List<T>> consumer) throws IOException {
+        log.info("[Silver] Iniciando extração CSV genérica: {} → {}", csvPath, rowType.getSimpleName());
+
+        long totalLidas = 0;
+
+        try (BufferedReader reader = Files.newBufferedReader(csvPath, StandardCharsets.UTF_8)) {
+
+            reader.mark(1);
+            int firstChar = reader.read();
+            if (firstChar != '\uFEFF') {
+                reader.reset();
+            }
+
+            Iterator<T> iterator = new CsvToBeanBuilder<T>(reader)
+                    .withType(rowType)
+                    .withSeparator(';')
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .withIgnoreEmptyLine(true)
+                    .withThrowExceptions(false)
+                    .build()
+                    .iterator();
+
+            int effectiveChunkSize = chunkSize > 0 ? chunkSize : 10000;
+            List<T> chunk = new ArrayList<>(effectiveChunkSize);
+
+            while (iterator.hasNext()) {
+                totalLidas++;
+                T row = iterator.next();
+                chunk.add(row);
+                if (chunk.size() >= effectiveChunkSize) {
+                    consumer.accept(new ArrayList<>(chunk));
+                    chunk.clear();
+                }
+            }
+
+            if (!chunk.isEmpty()) {
+                consumer.accept(chunk);
+            }
+        }
+
+        log.info("[Silver] Extração CSV genérica concluída: {} linhas ({})", totalLidas, rowType.getSimpleName());
         return totalLidas;
     }
 }

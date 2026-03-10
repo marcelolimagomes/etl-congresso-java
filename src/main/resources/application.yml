@@ -61,6 +61,16 @@ etl:
     api-path: /api/v2
     csv-base-url: ${ETL_CAMARA_CSV_BASE_URL:https://dadosabertos.camara.leg.br/arquivos}
     csv-url-pattern: ${ETL_CAMARA_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/proposicoes/csv/proposicoes-{ano}.csv}
+    temas-csv-url-pattern: ${ETL_CAMARA_TEMAS_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/proposicoesTemas/csv/proposicoesTemas-{ano}.csv}
+    temas-csv-file-pattern: proposicoesTemas-{ano}.csv
+    autores-csv-url-pattern: ${ETL_CAMARA_AUTORES_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/proposicoesAutores/csv/proposicoesAutores-{ano}.csv}
+    autores-csv-file-pattern: proposicoesAutores-{ano}.csv
+    votacoes-csv-url-pattern: ${ETL_CAMARA_VOTACOES_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/votacoes/csv/votacoes-{ano}.csv}
+    votacoes-csv-file-pattern: votacoes-{ano}.csv
+    orientacoes-csv-url-pattern: ${ETL_CAMARA_ORIENTACOES_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/votacoesOrientacoes/csv/votacoesOrientacoes-{ano}.csv}
+    orientacoes-csv-file-pattern: votacoesOrientacoes-{ano}.csv
+    votos-csv-url-pattern: ${ETL_CAMARA_VOTOS_CSV_URL_PATTERN:https://dadosabertos.camara.leg.br/arquivos/votacoesVotos/csv/votacoesVotos-{ano}.csv}
+    votos-csv-file-pattern: votacoesVotos-{ano}.csv
     csv-tmp-dir: ${ETL_CSV_TMP_DIR:/tmp/etl/camara}
     tipos-aceitos: ${ETL_CAMARA_TIPOS:PL,PLP,MPV,PEC,PDL,PR,PDS}
     tipos-proposicao: PL,PLP,MPV,PEC,PDL,PR
@@ -78,6 +88,9 @@ etl:
     ano-inicio-historico: 1988
     page-size: 100
     enrich-url-texto: ${ETL_SENADO_ENRICH_URL_TEXTO:false}
+    enrichment:
+      # Paralelismo da etapa de detalhe; o rate limiter do senadoApi continua limitando o throughput.
+      parallelism: ${ETL_SENADO_ENRICHMENT_PARALLELISM:6}
 
   incremental:
     janela-dias: 2
@@ -87,6 +100,10 @@ etl:
       lookback-days: ${ETL_SENADO_LOOKBACK_DAYS:7}
 
   batch-size: ${ETL_BATCH_SIZE:500}
+
+  pagegen:
+    output-dir: ${ETL_PAGEGEN_OUTPUT_DIR:open-data/public}
+    batch-size: ${ETL_PAGEGEN_BATCH_SIZE:500}
 
   executor:
     core-pool-size: 8
@@ -109,7 +126,7 @@ resilience4j:
       senadoApi:
         limit-for-period: 8
         limit-refresh-period: 1s
-        timeout-duration: 500ms
+        timeout-duration: 2000ms
       camaraApi:
         limit-for-period: 20
         limit-refresh-period: 1s

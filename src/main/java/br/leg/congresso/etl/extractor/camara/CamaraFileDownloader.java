@@ -1,18 +1,5 @@
 package br.leg.congresso.etl.extractor.camara;
 
-import br.leg.congresso.etl.domain.EtlFileControl;
-import br.leg.congresso.etl.domain.EtlJobControl;
-import br.leg.congresso.etl.domain.enums.CasaLegislativa;
-import br.leg.congresso.etl.domain.enums.StatusEtl;
-import br.leg.congresso.etl.repository.EtlFileControlRepository;
-import br.leg.congresso.etl.transformer.ContentHashGenerator;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -24,9 +11,25 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import br.leg.congresso.etl.domain.EtlFileControl;
+import br.leg.congresso.etl.domain.EtlJobControl;
+import br.leg.congresso.etl.domain.enums.CasaLegislativa;
+import br.leg.congresso.etl.domain.enums.StatusEtl;
+import br.leg.congresso.etl.repository.EtlFileControlRepository;
+import br.leg.congresso.etl.transformer.ContentHashGenerator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 /**
- * Respons\u00e1vel por baixar os arquivos CSV de proposi\u00e7\u00f5es da C\u00e2mara dos Deputados.
- * Faz download streaming direto para disco — sem limite de buffer em mem\u00f3ria.
+ * Respons\u00e1vel por baixar os arquivos CSV de proposi\u00e7\u00f5es da
+ * C\u00e2mara dos Deputados.
+ * Faz download streaming direto para disco — sem limite de buffer em
+ * mem\u00f3ria.
  * Gerencia o controle de arquivos para evitar re-downloads desnecess\u00e1rios.
  */
 @Slf4j
@@ -35,7 +38,7 @@ import java.util.Optional;
 public class CamaraFileDownloader {
 
     @Qualifier("camaraCsvWebClient")
-    private final WebClient csvWebClient;  // mantido para futuras opera\u00e7\u00f5es reactivas
+    private final WebClient csvWebClient; // mantido para futuras opera\u00e7\u00f5es reactivas
     private final EtlFileControlRepository fileControlRepository;
     private final ContentHashGenerator hashGenerator;
 
@@ -45,7 +48,9 @@ public class CamaraFileDownloader {
     @Value("${etl.camara.csv-tmp-dir:/tmp/etl/camara}")
     private String tmpDir;
 
-    /** HttpClient nativo Java 11+ — segue redirects e n\u00e3o tem limite de buffer. */
+    /**
+     * HttpClient nativo Java 11+ — segue redirects e n\u00e3o tem limite de buffer.
+     */
     private final HttpClient httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.ALWAYS)
             .build();
@@ -57,18 +62,41 @@ public class CamaraFileDownloader {
             Path filePath,
             String checksum,
             boolean isNew,
-            EtlFileControl fileControl
-    ) {}
+            EtlFileControl fileControl) {
+    }
 
     /**
-     * Baixa o arquivo CSV para o ano informado, se necess\u00e1rio.
-     * Retorna o resultado com o caminho do arquivo e informa\u00e7\u00f5es de controle.
+     * Baixa o arquivo CSV para o ano informado, se necessário.
+     * Retorna o resultado com o caminho do arquivo e informações de controle.
      */
     public DownloadResult downloadIfNeeded(int ano, EtlJobControl jobControl) throws IOException {
-        String fileName  = "proposicoes-" + ano + ".csv";
-        String url       = csvUrlPattern.replace("{ano}", String.valueOf(ano));
-        Path   destDir   = Paths.get(tmpDir, String.valueOf(ano));
-        Path   destFile  = destDir.resolve(fileName);
+        String fileName = "proposicoes-" + ano + ".csv";
+        String url = csvUrlPattern.replace("{ano}", String.valueOf(ano));
+        return downloadIfNeeded(fileName, url, "proposicoes", ano, jobControl);
+    }
+
+    /**
+     * Baixa qualquer arquivo CSV para o ano informado usando URL pattern genérica.
+     *
+     * @param fileNamePattern padrão do nome do arquivo (substitui {ano})
+     * @param urlPattern      URL completa com {ano} como placeholder
+     * @param datasetLabel    rótulo do dataset para controle de arquivo
+     * @param ano             ano de referência
+     * @param jobControl      job de controle
+     */
+    public DownloadResult downloadDatasetIfNeeded(
+            String fileNamePattern, String urlPattern, String datasetLabel,
+            int ano, EtlJobControl jobControl) throws IOException {
+        String fileName = fileNamePattern.replace("{ano}", String.valueOf(ano));
+        String url = urlPattern.replace("{ano}", String.valueOf(ano));
+        return downloadIfNeeded(fileName, url, datasetLabel, ano, jobControl);
+    }
+
+    private DownloadResult downloadIfNeeded(
+            String fileName, String url, String datasetLabel,
+            int ano, EtlJobControl jobControl) throws IOException {
+        Path destDir = Paths.get(tmpDir, String.valueOf(ano));
+        Path destFile = destDir.resolve(fileName);
 
         Files.createDirectories(destDir);
         log.info("Verificando arquivo CSV: ano={}, url={}", ano, url);
@@ -88,7 +116,12 @@ public class CamaraFileDownloader {
             EtlFileControl ctrl = existingControl.get();
             if (!ctrl.deveProcessar(novoChecksum)) {
                 log.info("Arquivo CSV ano={} n\u00e3o foi alterado (checksum id\u00eantico). Pulando.", ano);
-                Files.deleteIfExists(tmpFile);
+                if (Files.exists(destFile)) {
+                    Files.deleteIfExists(tmpFile);
+                } else {
+                    // Garante disponibilidade do cache local para reprocessamento idempotente.
+                    Files.move(tmpFile, destFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
                 return new DownloadResult(destFile, novoChecksum, false, ctrl);
             }
             log.info("Arquivo CSV ano={} foi alterado. Reprocessando.", ano);
@@ -120,7 +153,8 @@ public class CamaraFileDownloader {
 
     /**
      * Download streaming para arquivo usando java.net.http.HttpClient.
-     * N\u00e3o carrega o conte\u00fado em mem\u00f3ria — ideal para arquivos grandes (> 50 MB).
+     * N\u00e3o carrega o conte\u00fado em mem\u00f3ria — ideal para arquivos
+     * grandes (> 50 MB).
      */
     private long streamToFile(String url, Path dest) throws IOException {
         log.debug("Streaming CSV para disco: {} -> {}", url, dest);

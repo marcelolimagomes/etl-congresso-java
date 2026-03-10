@@ -1,7 +1,11 @@
 package br.leg.congresso.etl.extractor.senado.dto;
 
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 /**
@@ -28,19 +32,40 @@ public class SenadoDetalheDTO {
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MateriaDetalhe {
+        /**
+         * Contém os campos de identificação: SiglaCasaIdentificacaoMateria,
+         * SiglaSubtipoMateria, DescricaoSubtipoMateria, DescricaoObjetivoProcesso
+         * e IndicadorTramitando.
+         */
+        @JsonProperty("IdentificacaoMateria")
+        private IdentificacaoMateria identificacaoMateria;
+
         @JsonProperty("DadosBasicosMateria")
         private DadosBasicos dadosBasicosMateria;
+
+        @JsonProperty("Classificacoes")
+        private Classificacoes classificacoes;
+
+        @JsonProperty("OutrasInformacoes")
+        private OutrasInformacoes outrasInformacoes;
 
         @JsonProperty("NaturezaMateria")
         private Natureza naturezaMateria;
 
         @JsonProperty("CasaOrigem")
         private CasaOrigem casaOrigem;
+
+        @JsonProperty("OrigemMateria")
+        private CasaOrigem origemMateria;
     }
 
+    /**
+     * Campos do nó IdentificacaoMateria (irmão de DadosBasicosMateria na resposta
+     * da API do Senado).
+     */
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class DadosBasicos {
+    public static class IdentificacaoMateria {
         /** Ex: "SF" (Senado Federal) ou "CD" (Câmara dos Deputados) */
         @JsonProperty("SiglaCasaIdentificacaoMateria")
         private String siglaCasaIdentificacao;
@@ -59,13 +84,18 @@ public class SenadoDetalheDTO {
         /** "Sim" ou "Não" */
         @JsonProperty("IndicadorTramitando")
         private String indicadorTramitando;
+    }
 
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class DadosBasicos {
         /** Palavras-chave separadas por ";" */
         @JsonProperty("IndexacaoMateria")
         private String indexacao;
 
         /** Sigla da casa iniciadora, quando disponível */
         @JsonProperty("SiglaCasaIniciadora")
+        @JsonAlias("CasaIniciadoraNoLegislativo")
         private String siglaCasaIniciadora;
 
         /** Nome descritivo da casa iniciadora */
@@ -75,6 +105,9 @@ public class SenadoDetalheDTO {
         /** "Sim" ou "Não" */
         @JsonProperty("IndicadorComplementar")
         private String indicadorComplementar;
+
+        @JsonProperty("NaturezaMateria")
+        private Natureza naturezaMateria;
     }
 
     @Data
@@ -95,5 +128,45 @@ public class SenadoDetalheDTO {
     public static class CasaOrigem {
         @JsonProperty("SiglaCasaOrigem")
         private String siglaCasaOrigem;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Classificacoes {
+        @JsonProperty("Classificacao")
+        private List<Classificacao> classificacao;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Classificacao {
+        @JsonProperty("CodigoClasse")
+        private String codigoClasse;
+
+        @JsonProperty("DescricaoClasse")
+        private String descricaoClasse;
+
+        @JsonProperty("DescricaoClasseHierarquica")
+        private String descricaoClasseHierarquica;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class OutrasInformacoes {
+        @JsonProperty("Servico")
+        private List<Servico> servico;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Servico {
+        @JsonProperty("NomeServico")
+        private String nomeServico;
+
+        @JsonProperty("DescricaoServico")
+        private String descricaoServico;
+
+        @JsonProperty("UrlServico")
+        private String urlServico;
     }
 }

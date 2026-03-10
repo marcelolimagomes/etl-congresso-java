@@ -1,4 +1,4 @@
-.PHONY: help up down dev build test logs clean db-only ingest ingest-doc
+.PHONY: help up down dev build test logs clean db-only ingest ingest-doc pages-generate pages-generate-ano pages-status
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ETL Congresso — Comandos principais
@@ -79,6 +79,10 @@ etl-full-senado: ## Inicia carga completa Senado (ano atual)
 	   "http://localhost:8080/admin/etl/senado/full-load?anoInicio=$$ANO_INI&anoFim=$$ANO_FIM" \
 	   | python3 -m json.tool
 
+etl-full-ambas: ## Inicia carga completa de ambas as casas via ingest.sh (ex: make etl-full-ambas ANO_INI=2024 ANO_FIM=2024)
+	@./scripts/ingest.sh --env $${ENV:-host} --mode silver-full \
+		--ano-inicio $${ANO_INI:-2024} --ano-fim $${ANO_FIM:-2024}
+
 etl-status: ## Verifica status dos jobs ETL
 	@curl -sf -u admin:changeme http://localhost:8080/admin/etl/status | python3 -m json.tool
 
@@ -96,3 +100,21 @@ ingest: ## Dispara ingestão via script (ex: make ingest MODE=camara-full ENV=ho
 
 ingest-doc: ## Exibe o caminho do guia de operação da ingestão
 	@echo "Veja: docs/operacao-ingestao.md"
+
+# ── Geração de Páginas Estáticas ──────────────────────────────────────────────
+
+pages-generate: ## Gera todas as páginas estáticas de proposições (requer app rodando)
+	@curl -sf -X POST -u admin:changeme \
+	  http://localhost:8080/admin/etl/pages/generate \
+	  | python3 -m json.tool
+
+pages-generate-ano: ## Gera páginas de um ano específico (uso: make pages-generate-ano ANO=2024)
+	@test -n "$(ANO)" || (echo "Informe o ano: make pages-generate-ano ANO=2024" && exit 1)
+	@curl -sf -X POST -u admin:changeme \
+	  "http://localhost:8080/admin/etl/pages/generate?ano=$(ANO)" \
+	  | python3 -m json.tool
+
+pages-status: ## Verifica status da geração de páginas
+	@curl -sf -u admin:changeme \
+	  http://localhost:8080/admin/etl/pages/status \
+	  | python3 -m json.tool
