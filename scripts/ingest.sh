@@ -189,7 +189,7 @@ start_java_app_if_needed() {
   (
     cd "$ROOT_DIR"
     JAVA_HOME="$java_home" \
-    SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5432/etl_congresso}" \
+    SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5433/etl_congresso}" \
     SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-etl_user}" \
     SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-etl_pass}" \
     ADMIN_USERNAME="$ADMIN_USERNAME" \

@@ -41,7 +41,7 @@ import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
  * Teste de integração da geração de páginas HTML estáticas.
  *
  * <p>
- * Requer PostgreSQL disponível em localhost:5432 (docker-compose up).
+ * Requer PostgreSQL disponível em localhost:5433 (docker-compose up).
  * Para personalizar: {@code -Dtest.datasource.url=jdbc:postgresql://...}
  *
  * <p>
@@ -57,7 +57,7 @@ class ProposicaoPageGenerationIT {
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",
                 () -> System.getProperty("test.datasource.url",
-                        "jdbc:postgresql://localhost:5432/etl_congresso"));
+                        "jdbc:postgresql://localhost:5433/etl_congresso"));
         registry.add("spring.datasource.username",
                 () -> System.getProperty("test.datasource.username", "etl_user"));
         registry.add("spring.datasource.password",

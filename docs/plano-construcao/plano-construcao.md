@@ -406,7 +406,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-etl_pass}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5433"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -434,7 +434,7 @@ services:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${APP_PROFILE:-prod}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-etl_congresso}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5433/${POSTGRES_DB:-etl_congresso}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-etl_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-etl_pass}
       ETL_CAMARA_BASE_URL: ${ETL_CAMARA_BASE_URL:-https://dadosabertos.camara.leg.br}
@@ -563,7 +563,7 @@ services:
 
   postgres:
     ports:
-      - "5432:5432"   # Expõe BD para IDE local
+      - "5433:5433"   # Expõe BD para IDE local
 
   etl-app:
     # Em dev, a aplicação roda via IDE/Maven. Remove o serviço.
@@ -797,7 +797,7 @@ spring:
     name: etl-congresso
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/etl_congresso}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/etl_congresso}
     username: ${SPRING_DATASOURCE_USERNAME:etl_user}
     password: ${SPRING_DATASOURCE_PASSWORD:etl_pass}
     driver-class-name: org.postgresql.Driver
@@ -1245,7 +1245,7 @@ Criar arquivo `.env` na raiz do projeto (baseado em `.env.example`):
 POSTGRES_DB=etl_congresso
 POSTGRES_USER=etl_user
 POSTGRES_PASSWORD=etl_pass_segura_aqui
-POSTGRES_PORT=5432
+POSTGRES_PORT=5433
 
 # Aplicação
 APP_PORT=8080

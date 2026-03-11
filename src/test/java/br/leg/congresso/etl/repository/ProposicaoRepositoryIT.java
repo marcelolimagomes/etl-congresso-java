@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Teste de integração do repositório de proposições.
  *
- * <p>Requer PostgreSQL disponível em localhost:5432 (docker-compose up).
+ * <p>Requer PostgreSQL disponível em localhost:5433 (docker-compose up).
  * Para personalizar: {@code -Dtest.datasource.url=jdbc:postgresql://...}
  */
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
@@ -36,7 +36,7 @@ class ProposicaoRepositoryIT {
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",
                 () -> System.getProperty("test.datasource.url",
-                        "jdbc:postgresql://localhost:5432/etl_congresso"));
+                        "jdbc:postgresql://localhost:5433/etl_congresso"));
         registry.add("spring.datasource.username",
                 () -> System.getProperty("test.datasource.username", "etl_user"));
         registry.add("spring.datasource.password",

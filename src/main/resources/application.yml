@@ -3,7 +3,7 @@ spring:
     name: etl-congresso
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/etl_congresso}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/etl_congresso}
     username: ${SPRING_DATASOURCE_USERNAME:etl_user}
     password: ${SPRING_DATASOURCE_PASSWORD:etl_pass}
     driver-class-name: org.postgresql.Driver

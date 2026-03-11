@@ -16,7 +16,7 @@ db-only: env ## Sobe apenas o PostgreSQL (para desenvolvimento local)
 	docker compose up -d postgres adminer
 
 dev: env db-only ## Ambiente de desenvolvimento (BD + Adminer)
-	@echo "BD disponível em: localhost:5432"
+	@echo "BD disponível em: localhost:5433"
 	@echo "Adminer em: http://localhost:8081"
 	@echo "Para rodar a app: mvn spring-boot:run -Dspring-boot.run.profiles=local"
 
