@@ -14,4 +14,6 @@ public interface SilverSenadoVotacaoRepository extends JpaRepository<SilverSenad
             UUID senadoMateriaId,
             String codigoSessaoVotacao,
             String sequencialSessao);
+
+    java.util.List<SilverSenadoVotacao> findBySenadoMateriaId(UUID senadoMateriaId);
 }

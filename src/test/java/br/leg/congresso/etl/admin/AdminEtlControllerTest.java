@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Objects;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +38,10 @@ class AdminEtlControllerTest {
     void silverStatus_comAno_retornaPayload() {
         SilverStatusDTO dto = new SilverStatusDTO(
             2024,
+            7878,
+            0,
+            513,
+            13,
             5419,
             12000,
             1431,
@@ -49,9 +55,10 @@ class AdminEtlControllerTest {
         ResponseEntity<SilverStatusDTO> response = controller.silverStatus(2024);
 
         assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().anoFiltro()).isEqualTo(2024);
-        assertThat(response.getBody().goldCamaraProposicoesTotal()).isEqualTo(5300);
+        SilverStatusDTO body = Objects.requireNonNull(response.getBody());
+        assertThat(body.anoFiltro()).isEqualTo(2024);
+        assertThat(body.camaraDeputadosComContatoEmail()).isEqualTo(513);
+        assertThat(body.goldCamaraProposicoesTotal()).isEqualTo(5300);
         verify(silverStatusService).calcularStatus(2024);
     }
 }

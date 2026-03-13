@@ -18,6 +18,9 @@ public interface SilverCamaraVotacaoRepository extends JpaRepository<SilverCamar
 
     List<SilverCamaraVotacao> findAllByVotacaoIdIn(Collection<String> votacaoIds);
 
+        List<SilverCamaraVotacao> findByUltimaApresentacaoProposicaoIdProposicaoOrderByDataDesc(
+            Integer ultimaApresentacaoProposicaoIdProposicao);
+
     @Query("SELECT COUNT(v) FROM SilverCamaraVotacao v WHERE v.data >= :dataInicio AND v.data <= :dataFim")
     long countByDataBetween(@Param("dataInicio") java.time.LocalDate dataInicio,
             @Param("dataFim") java.time.LocalDate dataFim);

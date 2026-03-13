@@ -3,7 +3,9 @@ package br.leg.congresso.etl.pagegen;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,18 +21,29 @@ import br.leg.congresso.etl.domain.Tramitacao;
 import br.leg.congresso.etl.domain.enums.CasaLegislativa;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicao;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoAutor;
+import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoRelacionada;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoTema;
+import br.leg.congresso.etl.domain.silver.SilverCamaraVotacao;
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
+import br.leg.congresso.etl.domain.silver.SilverSenadoDocumento;
 import br.leg.congresso.etl.domain.silver.SilverSenadoMateria;
+import br.leg.congresso.etl.domain.silver.SilverSenadoVotacao;
 import br.leg.congresso.etl.pagegen.dto.AutorDTO;
+import br.leg.congresso.etl.pagegen.dto.DocumentoResumoDTO;
 import br.leg.congresso.etl.pagegen.dto.ProposicaoPageDTO;
+import br.leg.congresso.etl.pagegen.dto.ProposicaoResumoDTO;
 import br.leg.congresso.etl.pagegen.dto.TramitacaoDTO;
+import br.leg.congresso.etl.pagegen.dto.VotacaoResumoDTO;
 import br.leg.congresso.etl.repository.TramitacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRelacionadaRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoTemaRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraVotacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoDocumentoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoVotacaoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -65,8 +78,12 @@ public class ProposicaoPageAssembler {
     private final SilverCamaraProposicaoRepository silverCamaraProposicaoRepository;
     private final SilverCamaraProposicaoAutorRepository silverCamaraAutorRepository;
     private final SilverCamaraProposicaoTemaRepository silverCamaraProposicaoTemaRepository;
+    private final SilverCamaraProposicaoRelacionadaRepository silverCamaraProposicaoRelacionadaRepository;
+    private final SilverCamaraVotacaoRepository silverCamaraVotacaoRepository;
     private final SilverSenadoMateriaRepository silverSenadoMateriaRepository;
     private final SilverSenadoAutoriaRepository silverSenadoAutoriaRepository;
+    private final SilverSenadoDocumentoRepository silverSenadoDocumentoRepository;
+    private final SilverSenadoVotacaoRepository silverSenadoVotacaoRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -100,6 +117,7 @@ public class ProposicaoPageAssembler {
         String idOriginal = proposicao.getIdOrigem();
         String siglaTipo = proposicao.getSigla() != null ? proposicao.getSigla() : proposicao.getTipo().getSigla();
         String descricaoTipo = resolveDescricaoTipo(proposicao);
+        String situacaoDescricao = normalizeSituacaoDescricao(proposicao.getSituacao(), proposicao.getCasa());
 
         String autoriaResumo = buildAutoriaResumo(autores);
         String dataApresentacaoFormatada = formatDate(proposicao.getDataApresentacao());
@@ -110,8 +128,8 @@ public class ProposicaoPageAssembler {
                 ? proposicao.getDataAtualizacao().format(ISO_DT)
                 : null;
 
-        String canonicalUrl = BASE_URL + "/proposicoes/" + casaStr + "-" + idOriginal;
-        String situacaoTramitacao = resolveSituacaoTramitacao(proposicao);
+        String canonicalUrl = BASE_URL + "/stat-proposicoes/" + casaStr + "-" + idOriginal + "/";
+        String situacaoTramitacao = resolveSituacaoTramitacao(proposicao, situacaoDescricao);
 
         String seoTitle = buildSeoTitle(siglaTipo, proposicao.getNumero(), proposicao.getAno(), casaLabel);
         String seoDescription = buildSeoDescription(proposicao.getEmenta(), autores);
@@ -122,12 +140,19 @@ public class ProposicaoPageAssembler {
                 proposicao.getNumero(), proposicao.getAno());
 
         var tramitacaoDTOs = buildTramitacoes(tramitacoes);
+        var documentos = buildDocumentos(proposicao);
+        var relacionadas = isCamara
+            ? buildRelacionadasCamara(proposicao)
+            : List.<ProposicaoResumoDTO>of();
+        var votacoes = isCamara
+            ? buildVotacoesCamara(proposicao)
+            : buildVotacoesSenado(proposicao);
         var keywords = parseKeywords(proposicao.getKeywords());
         var orgaoAtual = resolveOrgaoAtual(proposicao);
         var proposicaoJsonEmbutido = buildProposicaoJson(
                 casaStr, idOriginal, siglaTipo, descricaoTipo, proposicao,
                 autores, tramitacoes, temas, ementaDetalhada, orgaoAtual, regime,
-                autoriaResumo, situacaoTramitacao, dataApresentacaoIso, dataAtualizacaoIso,
+                autoriaResumo, situacaoDescricao, situacaoTramitacao, dataApresentacaoIso, dataAtualizacaoIso,
                 keywords);
 
         return ProposicaoPageDTO.builder()
@@ -140,7 +165,7 @@ public class ProposicaoPageAssembler {
                 .ano(proposicao.getAno())
                 .ementa(proposicao.getEmenta())
                 .ementaDetalhada(ementaDetalhada)
-                .situacaoDescricao(proposicao.getSituacao())
+                .situacaoDescricao(situacaoDescricao)
                 .situacaoTramitacao(situacaoTramitacao)
                 .dataApresentacao(dataApresentacaoFormatada)
                 .orgaoAtual(orgaoAtual)
@@ -151,6 +176,9 @@ public class ProposicaoPageAssembler {
                 .autoriaResumo(autoriaResumo)
                 .autores(autores)
                 .tramitacoes(tramitacaoDTOs)
+                .documentos(documentos)
+                .relacionadas(relacionadas)
+                .votacoes(votacoes)
                 .canonicalUrl(canonicalUrl)
                 .seoTitle(seoTitle)
                 .seoDescription(seoDescription)
@@ -227,7 +255,8 @@ public class ProposicaoPageAssembler {
     private List<String> buildTemasSenadoFromIndexacao(Proposicao proposicao) {
         if (proposicao.getSilverSenadoId() == null)
             return List.of();
-        return silverSenadoMateriaRepository.findById(proposicao.getSilverSenadoId())
+        var silverSenadoId = proposicao.getSilverSenadoId();
+        return silverSenadoMateriaRepository.findById(java.util.Objects.requireNonNull(silverSenadoId))
                 .map(SilverSenadoMateria::getDetIndexacao)
                 .filter(s -> s != null && !s.isBlank())
                 .map(s -> List.of(s.split("[,;]+\\s*")))
@@ -239,12 +268,82 @@ public class ProposicaoPageAssembler {
                 .toList();
     }
 
+    private List<ProposicaoResumoDTO> buildRelacionadasCamara(Proposicao proposicao) {
+        if (proposicao.getIdOrigem() == null) {
+            return List.of();
+        }
+        return silverCamaraProposicaoRelacionadaRepository.findByProposicaoId(proposicao.getIdOrigem()).stream()
+                .sorted(java.util.Comparator
+                        .comparing(this::parseAnoRelacionada, java.util.Comparator.reverseOrder())
+                        .thenComparing(SilverCamaraProposicaoRelacionada::getRelacionadaNumero,
+                                java.util.Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .map(this::toProposicaoRelacionadaResumo)
+                .filter(java.util.Objects::nonNull)
+                .limit(8)
+                .toList();
+    }
+
+    private List<VotacaoResumoDTO> buildVotacoesCamara(Proposicao proposicao) {
+        if (proposicao.getSilverCamaraId() == null) {
+            return List.of();
+        }
+        Integer idCamara = resolveCamaraId(proposicao);
+        if (idCamara == null) {
+            return List.of();
+        }
+        return silverCamaraVotacaoRepository
+                .findByUltimaApresentacaoProposicaoIdProposicaoOrderByDataDesc(idCamara)
+                .stream()
+                .map(this::toVotacaoResumo)
+                .limit(8)
+                .toList();
+    }
+
+    private List<VotacaoResumoDTO> buildVotacoesSenado(Proposicao proposicao) {
+        if (proposicao.getSilverSenadoId() == null) {
+            return List.of();
+        }
+        return silverSenadoVotacaoRepository.findBySenadoMateriaId(proposicao.getSilverSenadoId()).stream()
+                .sorted(Comparator.comparing(this::parseDataSessaoSenado,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toVotacaoResumo)
+                .limit(8)
+                .toList();
+    }
+
+    private List<DocumentoResumoDTO> buildDocumentos(Proposicao proposicao) {
+        Map<String, DocumentoResumoDTO> documentos = new LinkedHashMap<>();
+
+        if (notBlank(proposicao.getUrlInteiroTeor())) {
+            documentos.put(proposicao.getUrlInteiroTeor(), DocumentoResumoDTO.builder()
+                    .titulo("Inteiro teor")
+                    .descricao("Texto integral disponibilizado pela fonte oficial")
+                    .data(formatDate(proposicao.getDataApresentacao()))
+                    .url(proposicao.getUrlInteiroTeor())
+                    .origem(proposicao.getCasa() == CasaLegislativa.CAMARA ? "Câmara dos Deputados" : "Fonte oficial")
+                    .build());
+        }
+
+        if (proposicao.getSilverSenadoId() != null) {
+            silverSenadoDocumentoRepository.findBySenadoMateriaId(proposicao.getSilverSenadoId()).stream()
+                    .filter(documento -> notBlank(documento.getUrlDocumento()))
+                    .sorted(Comparator.comparing(this::parseDataDocumentoSenado,
+                            Comparator.nullsLast(Comparator.reverseOrder())))
+                    .map(this::toDocumentoResumo)
+                    .filter(java.util.Objects::nonNull)
+                    .forEach(documento -> documentos.putIfAbsent(documento.getUrl(), documento));
+        }
+
+        return documentos.values().stream().limit(8).toList();
+    }
+
     // ── Campos enriquecidos Silver Câmara ─────────────────────────────────────
 
     private String resolveEmentaDetalhadaCamara(Proposicao proposicao) {
         if (proposicao.getSilverCamaraId() == null)
             return null;
-        return silverCamaraProposicaoRepository.findById(proposicao.getSilverCamaraId())
+        var silverCamaraId = proposicao.getSilverCamaraId();
+        return silverCamaraProposicaoRepository.findById(java.util.Objects.requireNonNull(silverCamaraId))
                 .map(SilverCamaraProposicao::getEmentaDetalhada)
                 .orElse(null);
     }
@@ -252,7 +351,8 @@ public class ProposicaoPageAssembler {
     private String resolveRegimeCamara(Proposicao proposicao) {
         if (proposicao.getSilverCamaraId() == null)
             return null;
-        return silverCamaraProposicaoRepository.findById(proposicao.getSilverCamaraId())
+        var silverCamaraId = proposicao.getSilverCamaraId();
+        return silverCamaraProposicaoRepository.findById(java.util.Objects.requireNonNull(silverCamaraId))
                 .map(s -> s.getStatusRegime() != null ? s.getStatusRegime() : s.getUltimoStatusRegime())
                 .orElse(null);
     }
@@ -260,7 +360,8 @@ public class ProposicaoPageAssembler {
     private String resolveIndexacaoSenado(Proposicao proposicao) {
         if (proposicao.getSilverSenadoId() == null)
             return null;
-        return silverSenadoMateriaRepository.findById(proposicao.getSilverSenadoId())
+        var silverSenadoId = proposicao.getSilverSenadoId();
+        return silverSenadoMateriaRepository.findById(java.util.Objects.requireNonNull(silverSenadoId))
                 .map(SilverSenadoMateria::getDetIndexacao)
                 .orElse(null);
     }
@@ -269,7 +370,8 @@ public class ProposicaoPageAssembler {
         if (proposicao.getCasa() != CasaLegislativa.CAMARA || proposicao.getSilverCamaraId() == null) {
             return null;
         }
-        return silverCamaraProposicaoRepository.findById(proposicao.getSilverCamaraId())
+        var silverCamaraId = proposicao.getSilverCamaraId();
+        return silverCamaraProposicaoRepository.findById(java.util.Objects.requireNonNull(silverCamaraId))
                 .map(s -> s.getStatusSiglaOrgao() != null ? s.getStatusSiglaOrgao() : s.getUltimoStatusSiglaOrgao())
                 .orElse(null);
     }
@@ -289,14 +391,163 @@ public class ProposicaoPageAssembler {
                 .toList();
     }
 
+    private ProposicaoResumoDTO toProposicaoRelacionadaResumo(SilverCamaraProposicaoRelacionada relacionada) {
+        if (relacionada.getRelacionadaId() == null) {
+            return null;
+        }
+        String titulo = nvl(relacionada.getRelacionadaSiglaTipo(), "Proposição") + " "
+                + nvl(relacionada.getRelacionadaNumero(), "s/n") + "/"
+                + nvl(relacionada.getRelacionadaAno(), "s/ano");
+        return ProposicaoResumoDTO.builder()
+                .titulo(titulo)
+                .ementa(relacionada.getRelacionadaEmenta())
+                .situacao("Relacionada")
+                .url("/stat-proposicoes/camara-" + relacionada.getRelacionadaId() + "/")
+                .casa("camara")
+                .casaLabel("Câmara dos Deputados")
+                .build();
+    }
+
+    private VotacaoResumoDTO toVotacaoResumo(SilverCamaraVotacao votacao) {
+        String resultado = Short.valueOf((short) 1).equals(votacao.getAprovacao()) ? "Aprovada"
+                : Short.valueOf((short) 0).equals(votacao.getAprovacao()) ? "Rejeitada"
+                        : "Resultado não informado";
+        String placar = "%s sim · %s não · %s outros".formatted(
+                zeroIfNull(votacao.getVotosSim()),
+                zeroIfNull(votacao.getVotosNao()),
+                zeroIfNull(votacao.getVotosOutros()));
+        return VotacaoResumoDTO.builder()
+                .data(votacao.getData() != null ? votacao.getData().format(BR_DATE) : null)
+                .orgao(votacao.getSiglaOrgao())
+                .resultado(resultado)
+                .descricao(votacao.getDescricao())
+                .placar(placar)
+                .build();
+    }
+
+    private VotacaoResumoDTO toVotacaoResumo(SilverSenadoVotacao votacao) {
+        return VotacaoResumoDTO.builder()
+                .data(formatFlexibleDate(votacao.getDataSessao()))
+                .orgao(nvl(votacao.getSiglaCasa(), votacao.getCodigoSessao()))
+                .resultado(nvl(votacao.getDescricaoResultado(), votacao.getResultado(), "Resultado não informado"))
+                .descricao(votacao.getDescricaoVotacao())
+                .placar(buildPlacarSenado(votacao))
+                .build();
+    }
+
+    private DocumentoResumoDTO toDocumentoResumo(SilverSenadoDocumento documento) {
+        if (!notBlank(documento.getUrlDocumento())) {
+            return null;
+        }
+        return DocumentoResumoDTO.builder()
+                .titulo(nvl(documento.getTipoDocumento(), documento.getDescricaoTipoDocumento(), "Documento oficial"))
+                .descricao(nvl(documento.getDescricaoDocumento(), documento.getAutorNome()))
+                .data(formatFlexibleDate(documento.getDataDocumento()))
+                .url(documento.getUrlDocumento())
+                .origem("Senado Federal")
+                .build();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private String resolveSituacaoTramitacao(Proposicao proposicao) {
-        if (proposicao.isVirouLei() || "Encerrada".equalsIgnoreCase(proposicao.getSituacao())
-                || "Arquivada".equalsIgnoreCase(proposicao.getSituacao())) {
+    private String nvl(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private Integer parseAnoRelacionada(SilverCamaraProposicaoRelacionada relacionada) {
+        try {
+            return relacionada.getRelacionadaAno() != null ? Integer.parseInt(relacionada.getRelacionadaAno()) : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    private Integer resolveCamaraId(Proposicao proposicao) {
+        if (proposicao.getIdOrigem() == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(proposicao.getIdOrigem());
+        } catch (NumberFormatException e) {
+            log.debug("Id de proposição da Câmara não numérico: {}", proposicao.getIdOrigem());
+            return null;
+        }
+    }
+
+    private int zeroIfNull(Integer value) {
+        return value != null ? value : 0;
+    }
+
+    private String buildPlacarSenado(SilverSenadoVotacao votacao) {
+        Integer sim = votacao.getTotalVotosSim();
+        Integer nao = votacao.getTotalVotosNao();
+        Integer abstencao = votacao.getTotalVotosAbstencao();
+        if (sim == null && nao == null && abstencao == null) {
+            return "Placar não informado";
+        }
+        return "%s sim · %s não · %s abstenções".formatted(
+                zeroIfNull(sim),
+                zeroIfNull(nao),
+                zeroIfNull(abstencao));
+    }
+
+    private LocalDate parseDataSessaoSenado(SilverSenadoVotacao votacao) {
+        return parseFlexibleDateToLocalDate(votacao.getDataSessao());
+    }
+
+    private LocalDate parseDataDocumentoSenado(SilverSenadoDocumento documento) {
+        return parseFlexibleDateToLocalDate(documento.getDataDocumento());
+    }
+
+    private String formatFlexibleDate(String value) {
+        LocalDate parsed = parseFlexibleDateToLocalDate(value);
+        return parsed != null ? parsed.format(BR_DATE) : value;
+    }
+
+    private LocalDate parseFlexibleDateToLocalDate(String value) {
+        if (!notBlank(value)) {
+            return null;
+        }
+        String normalized = value.length() >= 10 ? value.substring(0, 10) : value;
+        for (DateTimeFormatter formatter : List.of(DateTimeFormatter.ISO_LOCAL_DATE, BR_DATE)) {
+            try {
+                return LocalDate.parse(normalized, formatter);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+        return null;
+    }
+
+    private boolean notBlank(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String resolveSituacaoTramitacao(Proposicao proposicao, String situacaoDescricao) {
+        if (proposicao.isVirouLei() || "Encerrada".equalsIgnoreCase(situacaoDescricao)
+                || "Arquivada".equalsIgnoreCase(situacaoDescricao)) {
             return "encerrada";
         }
         return "tramitando";
+    }
+
+    private String normalizeSituacaoDescricao(String situacao, CasaLegislativa casa) {
+        if (!notBlank(situacao)) {
+            return null;
+        }
+        if (casa == CasaLegislativa.SENADO) {
+            if ("sim".equalsIgnoreCase(situacao)) {
+                return "Em tramitação";
+            }
+            if ("não".equalsIgnoreCase(situacao) || "nao".equalsIgnoreCase(situacao)) {
+                return "Encerrada";
+            }
+        }
+        return situacao;
     }
 
     private String resolveDescricaoTipo(Proposicao proposicao) {
@@ -356,7 +607,7 @@ public class ProposicaoPageAssembler {
             var items = List.of(
                     Map.of("@type", "ListItem", "position", 1, "name", "Início", "item", BASE_URL),
                     Map.of("@type", "ListItem", "position", 2, "name", "Proposições", "item",
-                            BASE_URL + "/proposicoes"),
+                            BASE_URL + "/stat-proposicoes"),
                     Map.of("@type", "ListItem", "position", 3, "name", sigla + " " + numero + "/" + ano, "item", url));
             var schema = Map.of(
                     "@context", "https://schema.org",
@@ -381,7 +632,7 @@ public class ProposicaoPageAssembler {
             String casa, String idOriginal, String siglaTipo, String descricaoTipo,
             Proposicao p, List<AutorDTO> autores, List<Tramitacao> tramitacoes,
             List<String> temas, String ementaDetalhada, String orgaoAtual, String regime,
-            String autoriaResumo, String situacaoTramitacao,
+            String autoriaResumo, String situacaoDescricao, String situacaoTramitacao,
             String dataApresentacaoIso, String dataAtualizacaoIso, List<String> keywords) {
         try {
             var autoresJson = autores.stream().map(a -> {
@@ -418,7 +669,7 @@ public class ProposicaoPageAssembler {
             json.put("dataApresentacao", dataApresentacaoIso != null ? dataApresentacaoIso : "");
             json.put("autoria", autoriaResumo != null ? autoriaResumo : "");
             json.put("situacaoTramitacao", situacaoTramitacao);
-            json.put("situacaoDescricao", p.getSituacao() != null ? p.getSituacao() : "");
+            json.put("situacaoDescricao", situacaoDescricao != null ? situacaoDescricao : "");
             if (dataAtualizacaoIso != null)
                 json.put("dataUltimaAtualizacao", dataAtualizacaoIso);
             json.put("ementaDetalhada", ementaDetalhada != null ? ementaDetalhada : "");

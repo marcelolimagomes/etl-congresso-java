@@ -98,12 +98,25 @@ public class SenadoGoldPromoter {
             .tipo(tipo)
             .ementa(silver.getEmenta())
             .dataApresentacao(parseDate(silver.getData()))
-            .situacao(silver.getDetIndicadorTramitando())
+            .situacao(normalizeSituacao(silver.getDetIndicadorTramitando()))
             .keywords(silver.getDetIndexacao())
             .idOrigem(silver.getCodigo())
             .uriOrigem(silver.getUrlDetalheMateria())
             .silverSenadoId(silver.getId())
             .build();
+    }
+
+    private String normalizeSituacao(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        if ("sim".equalsIgnoreCase(value)) {
+            return "Em tramitação";
+        }
+        if ("não".equalsIgnoreCase(value) || "nao".equalsIgnoreCase(value)) {
+            return "Encerrada";
+        }
+        return value;
     }
 
     private Integer parseIntSafe(String value) {

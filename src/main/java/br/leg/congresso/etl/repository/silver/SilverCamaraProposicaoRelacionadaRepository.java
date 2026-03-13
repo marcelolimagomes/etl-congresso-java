@@ -12,4 +12,6 @@ public interface SilverCamaraProposicaoRelacionadaRepository
         extends JpaRepository<SilverCamaraProposicaoRelacionada, UUID> {
 
     boolean existsByProposicaoIdAndRelacionadaId(String proposicaoId, Integer relacionadaId);
+
+    java.util.List<SilverCamaraProposicaoRelacionada> findByProposicaoId(String proposicaoId);
 }

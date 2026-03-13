@@ -30,14 +30,35 @@
     <meta name="twitter:title" th:content="${page.seoTitle}" />
     <meta name="twitter:description" th:content="${page.seoDescription}" />
 
+    <script
+      type="application/ld+json"
+      th:utext="${page.schemaOrgPersonJson}"
+    ></script>
+
+    <script
+      type="application/ld+json"
+      th:utext="${page.schemaOrgBreadcrumbJson}"
+    ></script>
+
+    <!-- Tema: sincroniza com Nuxt (localStorage nuxt-color-mode) -->
+    <script>(function(){try{var m=localStorage.getItem('nuxt-color-mode')||'light';if(m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}}());</script>
+
     <style>
+      :root {
+        --bg: #f9fafb; --bgc: #fff; --tx: #111827; --txm: #6b7280;
+        --bd: #e5e7eb; --hd: #1a4480; --lk: #3b82f6; --sp: #f3f4f6;
+      }
+      :root.dark {
+        --bg: #111827; --bgc: #1f2937; --tx: #f1f5f9; --txm: #9ca3af;
+        --bd: #374151; --hd: #60a5fa; --lk: #93c5fd; --sp: #374151;
+      }
       body {
         font-family:
           system-ui,
           -apple-system,
           sans-serif;
-        color: #111;
-        background: #f9fafb;
+        color: var(--tx);
+        background: var(--bg);
         margin: 0;
         padding: 0;
       }
@@ -47,12 +68,12 @@
         padding: 2rem 1rem;
       }
       h1 {
-        color: #1a4480;
+        color: var(--hd);
         font-size: 1.75rem;
         margin-bottom: 0.5rem;
       }
       h2 {
-        color: #111;
+        color: var(--tx);
         font-size: 1.1rem;
         margin-bottom: 1rem;
       }
@@ -75,9 +96,12 @@
         background: #fef9c3;
         color: #854d0e;
       }
+      :root.dark .badge-senado { background: #1e3a5f; color: #93c5fd; }
+      :root.dark .badge-titular { background: #14532d; color: #86efac; }
+      :root.dark .badge-suplente { background: #451a03; color: #fde68a; }
       .card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
+        background: var(--bgc);
+        border: 1px solid var(--bd);
         border-radius: 0.75rem;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
@@ -85,9 +109,9 @@
       .section-title {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #111;
+        color: var(--tx);
         margin-bottom: 1rem;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--bd);
         padding-bottom: 0.5rem;
       }
       dl.info-grid {
@@ -97,21 +121,21 @@
       }
       dl.info-grid dt {
         font-size: 0.8rem;
-        color: #6b7280;
+        color: var(--txm);
         margin-bottom: 0.25rem;
       }
       dl.info-grid dd {
         font-size: 0.95rem;
-        color: #111;
+        color: var(--tx);
         margin: 0;
       }
       nav.breadcrumb {
         font-size: 0.875rem;
-        color: #9ca3af;
+        color: var(--txm);
         margin-bottom: 1.5rem;
       }
       nav.breadcrumb a {
-        color: #3b82f6;
+        color: var(--lk);
         text-decoration: none;
       }
       nav.breadcrumb span.sep {
@@ -137,7 +161,7 @@
         display: inline-block;
         margin-right: 0.5rem;
         font-size: 0.85rem;
-        color: #3b82f6;
+        color: var(--lk);
         text-decoration: none;
         word-break: break-all;
       }
@@ -148,12 +172,48 @@
         margin-top: 0.5rem;
       }
       .tag {
-        background: #f3f4f6;
-        color: #374151;
+        background: var(--sp);
+        color: var(--tx);
         padding: 0.15rem 0.5rem;
         border-radius: 9999px;
         font-size: 0.75rem;
       }
+      .list-stack {
+        display: grid;
+        gap: 0.85rem;
+      }
+      .list-item {
+        border: 1px solid var(--bd);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        background: color-mix(in srgb, var(--bgc) 92%, var(--sp) 8%);
+      }
+      .list-title {
+        color: var(--hd);
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .list-meta {
+        margin-top: 0.35rem;
+        color: var(--txm);
+        font-size: 0.85rem;
+      }
+      .list-desc {
+        margin: 0.5rem 0 0;
+        color: var(--tx);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+      .tbtn {
+        position: fixed; top: 1rem; right: 1rem; z-index: 100;
+        background: var(--bgc); border: 1px solid var(--bd);
+        border-radius: 9999px; width: 2.5rem; height: 2.5rem;
+        cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.15);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .ic-s { display: none; } .ic-m { display: block; }
+      :root.dark .ic-s { display: block; } :root.dark .ic-m { display: none; }
       @media (max-width: 640px) {
         dl.info-grid {
           grid-template-columns: 1fr;
@@ -165,12 +225,16 @@
     </style>
   </head>
   <body>
+    <button class="tbtn" onclick="var d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('nuxt-color-mode',d?'dark':'light');}catch(e){}" aria-label="Alternar tema">
+      <svg class="ic-s" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg class="ic-m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
     <div class="container">
       <!-- Breadcrumb -->
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="/">Início</a>
         <span class="sep">/</span>
-        <a href="/parlamentares/senadores">Senadores</a>
+        <a href="/stat-parlamentares/">Parlamentares</a>
         <span class="sep">/</span>
         <span th:text="${page.nomeParlamentar}">Senador(a)</span>
       </nav>
@@ -204,7 +268,7 @@
             </div>
 
             <!-- Partido / UF -->
-            <p style="font-size: 1rem; color: #374151; margin: 0 0 0.25rem 0">
+            <p style="font-size: 1rem; color: var(--tx); margin: 0 0 0.25rem 0">
               <strong th:text="${page.partido}">Partido</strong>
               <span th:if="${page.uf != null}">
                 / <span th:text="${page.uf}">UF</span>
@@ -214,7 +278,7 @@
             <!-- Nome completo (se disponível e diferente) -->
             <p
               th:if="${page.nomeCompleto != null and page.nomeCompleto != page.nomeParlamentar}"
-              style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0"
+              style="font-size: 0.875rem; color: var(--txm); margin: 0.25rem 0 0 0"
             >
               Nome completo: <span th:text="${page.nomeCompleto}"></span>
             </p>
@@ -222,7 +286,7 @@
             <!-- Legislatura -->
             <p
               th:if="${page.legislatura != null}"
-              style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0 0 0"
+              style="font-size: 0.875rem; color: var(--txm); margin: 0.25rem 0 0 0"
             >
               Legislatura: <span th:text="${page.legislatura}"></span>
             </p>
@@ -265,6 +329,34 @@
             th:each="p : ${page.profissoes}"
             th:text="${p}"
           ></span>
+        </div>
+      </div>
+
+      <div
+        class="card"
+        th:if="${page.autoriasRecentes != null and !page.autoriasRecentes.isEmpty()}"
+      >
+        <h2 class="section-title" th:text="${'Matérias com Autoria (' + page.autoriasRecentes.size() + ')'}">Matérias com Autoria</h2>
+        <div class="list-stack">
+          <div class="list-item" th:each="item : ${page.autoriasRecentes}">
+            <a class="list-title" th:href="${item.url}" th:text="${item.titulo}">PL 123/2024</a>
+            <div class="list-meta" th:if="${item.situacao != null}" th:text="${item.situacao}">Em tramitação</div>
+            <p class="list-desc" th:if="${item.ementa != null}" th:text="${item.ementa}">Ementa</p>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="card"
+        th:if="${page.relatoriasRecentes != null and !page.relatoriasRecentes.isEmpty()}"
+      >
+        <h2 class="section-title" th:text="${'Matérias com Relatoria (' + page.relatoriasRecentes.size() + ')'}">Matérias com Relatoria</h2>
+        <div class="list-stack">
+          <div class="list-item" th:each="item : ${page.relatoriasRecentes}">
+            <a class="list-title" th:href="${item.url}" th:text="${item.titulo}">PEC 54/2024</a>
+            <div class="list-meta" th:if="${item.situacao != null}" th:text="${item.situacao}">Relatoria · CCJ</div>
+            <p class="list-desc" th:if="${item.ementa != null}" th:text="${item.ementa}">Ementa</p>
+          </div>
         </div>
       </div>
 
@@ -338,14 +430,14 @@
         style="
           margin-top: 2rem;
           font-size: 0.8rem;
-          color: #9ca3af;
+          color: var(--txm);
           text-align: center;
         "
       >
         Página gerada em
         <span th:text="${page.geradoEm}"></span>
         &bull;
-        <a href="https://www.translegis.com.br" style="color: #9ca3af"
+        <a href="https://www.translegis.com.br" style="color: var(--txm)"
           >Transparência Legislativa</a
         >
       </footer>

@@ -19,7 +19,7 @@ public class CamaraMesaDiretoraCSVRow {
     @CsvBindByName(column = "idLegislatura")
     private String idLegislatura;
 
-    @CsvBindByName(column = "titulo")
+    @CsvBindByName(column = "cargo")
     private String titulo;
 
     @CsvBindByName(column = "dataInicio")

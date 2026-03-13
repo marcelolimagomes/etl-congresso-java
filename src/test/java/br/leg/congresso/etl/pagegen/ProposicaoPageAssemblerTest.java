@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,10 +34,14 @@ import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoTema;
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
 import br.leg.congresso.etl.repository.TramitacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRelacionadaRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoTemaRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraVotacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoDocumentoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoVotacaoRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProposicaoPageAssembler — montagem do DTO")
@@ -51,15 +56,29 @@ class ProposicaoPageAssemblerTest {
     @Mock
     SilverCamaraProposicaoTemaRepository silverCamaraProposicaoTemaRepository;
     @Mock
+    SilverCamaraProposicaoRelacionadaRepository silverCamaraProposicaoRelacionadaRepository;
+    @Mock
+    SilverCamaraVotacaoRepository silverCamaraVotacaoRepository;
+    @Mock
     SilverSenadoMateriaRepository silverSenadoMateriaRepository;
     @Mock
     SilverSenadoAutoriaRepository silverSenadoAutoriaRepository;
+    @Mock
+    SilverSenadoDocumentoRepository silverSenadoDocumentoRepository;
+    @Mock
+    SilverSenadoVotacaoRepository silverSenadoVotacaoRepository;
 
     @InjectMocks
     ProposicaoPageAssembler assembler;
 
     @BeforeEach
     void setUp() {
+        when(silverCamaraProposicaoRelacionadaRepository.findByProposicaoId(any())).thenReturn(List.of());
+        when(silverCamaraVotacaoRepository.findByUltimaApresentacaoProposicaoIdProposicaoOrderByDataDesc(any()))
+            .thenReturn(List.of());
+        when(silverSenadoDocumentoRepository.findBySenadoMateriaId(any())).thenReturn(List.of());
+        when(silverSenadoVotacaoRepository.findBySenadoMateriaId(any())).thenReturn(List.of());
+
         // injeta ObjectMapper real para serialização JSON-LD
         var field = findField(ProposicaoPageAssembler.class, "objectMapper");
         if (field != null) {
@@ -116,7 +135,7 @@ class ProposicaoPageAssemblerTest {
                             .descricaoTramitacao("Proposição recebida pela Mesa.")
                             .build()));
 
-            when(silverCamaraProposicaoRepository.findById(silverCamaraId))
+                when(silverCamaraProposicaoRepository.findById(Objects.requireNonNull(silverCamaraId)))
                     .thenReturn(Optional.of(SilverCamaraProposicao.builder()
                             .id(silverCamaraId)
                             .ementaDetalhada("Ementa detalhada.")
@@ -264,7 +283,6 @@ class ProposicaoPageAssemblerTest {
 
             @Test
             @DisplayName("JSON contém campos básicos compatíveis com ProposicaoCompleta")
-            @SuppressWarnings("unchecked")
             void contemCamposBasicos() throws Exception {
                 var dto = assembler.assemble(buildProposicaoCamara());
                 Map<String, Object> json = om.readValue(dto.getProposicaoJsonEmbutido(),
@@ -325,6 +343,10 @@ class ProposicaoPageAssemblerTest {
         private final UUID silverSenadoId = UUID.randomUUID();
 
         private Proposicao buildProposicaoSenado() {
+            return buildProposicaoSenado("Em tramitação");
+        }
+
+        private Proposicao buildProposicaoSenado(String situacao) {
             return Proposicao.builder()
                     .id(UUID.randomUUID())
                     .casa(CasaLegislativa.SENADO)
@@ -333,7 +355,7 @@ class ProposicaoPageAssemblerTest {
                     .numero(100)
                     .ano(2023)
                     .ementa("Altera a Lei de Diretrizes...")
-                    .situacao("Em tramitação")
+                    .situacao(situacao)
                     .dataApresentacao(LocalDate.of(2023, 5, 10))
                     .idOrigem("12345")
                     .silverSenadoId(silverSenadoId)
@@ -353,7 +375,8 @@ class ProposicaoPageAssemblerTest {
                                     .ufParlamentar("RJ")
                                     .codigoTipoAutor("PARLAMENTAR")
                                     .build()));
-            when(silverSenadoMateriaRepository.findById(silverSenadoId)).thenReturn(Optional.empty());
+                when(silverSenadoMateriaRepository.findById(Objects.requireNonNull(silverSenadoId)))
+                    .thenReturn(Optional.empty());
         }
 
         @Test
@@ -378,6 +401,20 @@ class ProposicaoPageAssemblerTest {
         void montaCanonicalUrlSenado() {
             var dto = assembler.assemble(buildProposicaoSenado());
             assertThat(dto.getCanonicalUrl()).contains("/senado-12345");
+        }
+
+        @Test
+        @DisplayName("normaliza situação legada do Senado no DTO e no JSON")
+        void normalizaSituacaoLegadaSenado() throws Exception {
+            var dto = assembler.assemble(buildProposicaoSenado("Sim"));
+
+            assertThat(dto.getSituacaoDescricao()).isEqualTo("Em tramitação");
+            assertThat(dto.getSituacaoTramitacao()).isEqualTo("tramitando");
+
+            Map<String, Object> json = new ObjectMapper().readValue(dto.getProposicaoJsonEmbutido(),
+                    new TypeReference<>() {
+                    });
+            assertThat(json.get("situacaoDescricao")).isEqualTo("Em tramitação");
         }
     }
 

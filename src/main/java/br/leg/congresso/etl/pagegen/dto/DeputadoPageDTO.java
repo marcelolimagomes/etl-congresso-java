@@ -57,11 +57,17 @@ public class DeputadoPageDTO {
 
     private String primeiraLegislatura;
     private String ultimaLegislatura;
+    private List<DeputadoOrgaoDTO> orgaos;
+    private List<DeputadoFrenteDTO> frentes;
+    private DespesaResumoDTO despesasResumo;
+    private List<ProposicaoResumoDTO> proposicoesRecentes;
 
     // ── SEO / meta ────────────────────────────────────────────────────────────
 
     private String canonicalUrl;
     private String seoTitle;
     private String seoDescription;
+    private String schemaOrgPersonJson;
+    private String schemaOrgBreadcrumbJson;
     private String geradoEm;
 }

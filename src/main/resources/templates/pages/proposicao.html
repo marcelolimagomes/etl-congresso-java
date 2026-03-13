@@ -6,16 +6,19 @@
   Serve como página estática pré-renderizada para SEO.
   Após hidratação do Vue, a aplicação open-data assume a interatividade.
 -->
-  <head>
-    <th:block th:replace="~{fragments/head-seo :: head(${page})}" />
+  <head th:replace="~{fragments/head-seo :: head(${page})}">
   </head>
   <body>
+    <button class="tbtn" onclick="var d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('nuxt-color-mode',d?'dark':'light');}catch(e){}" aria-label="Alternar tema">
+      <svg class="ic-s" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg class="ic-m" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
     <div class="container">
       <!-- Breadcrumb ─────────────────────────────────────────────────── -->
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="/">Início</a>
         <span class="sep">/</span>
-        <a href="/proposicoes">Proposições</a>
+        <a href="/stat-proposicoes/">Proposições</a>
         <span class="sep">/</span>
         <span th:text="${page.siglaTipo + ' ' + page.numero + '/' + page.ano}"
           >PL 1234/2024</span
@@ -62,7 +65,7 @@
             </div>
 
             <p
-              style="font-size: 0.875rem; color: #6b7280; margin: 0 0 0.5rem 0"
+              style="font-size: 0.875rem; color: var(--txm); margin: 0 0 0.5rem 0"
               th:text="${page.descricaoTipo}"
             >
               Projeto de Lei
@@ -121,6 +124,29 @@
             >palavra-chave</span
           >
         </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Autores mapeados</div>
+            <div class="stat-value" th:text="${page.autores.size()}">0</div>
+            <div class="stat-detail">Autores identificados na base consolidada</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tramitações registradas</div>
+            <div class="stat-value" th:text="${page.tramitacoes.size()}">0</div>
+            <div class="stat-detail">Movimentações publicadas para esta proposição</div>
+          </div>
+          <div class="stat-card" th:if="${!page.temas.isEmpty() or !page.keywords.isEmpty()}">
+            <div class="stat-label">Temas e termos</div>
+            <div class="stat-value" th:text="${page.temas.size() + page.keywords.size()}">0</div>
+            <div class="stat-detail">Etiquetas derivadas da Silver e da Gold</div>
+          </div>
+          <div class="stat-card" th:if="${!page.documentos.isEmpty() or !page.votacoes.isEmpty() or !page.relacionadas.isEmpty()}">
+            <div class="stat-label">Conteúdo relacionado</div>
+            <div class="stat-value" th:text="${page.documentos.size() + page.votacoes.size() + page.relacionadas.size()}">0</div>
+            <div class="stat-detail">Documentos, votações e proposições ligadas ao tema</div>
+          </div>
+        </div>
       </div>
 
       <!-- Informações Gerais ──────────────────────────────────────────── -->
@@ -168,7 +194,7 @@
           style="margin-top: 1.5rem"
         >
           <h3
-            style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem"
+            style="font-size: 0.875rem; color: var(--txm); margin-bottom: 0.5rem"
           >
             Ementa Detalhada / Indexação
           </h3>
@@ -193,7 +219,7 @@
           <div>
             <a
               th:if="${autor.casa != null and autor.idOriginal != null}"
-              th:href="${'/parlamentares/' + autor.casa + '-' + autor.idOriginal}"
+              th:href="${'/stat-parlamentares/' + autor.casa + '-' + autor.idOriginal + '/'}"
               class="author-name"
               th:text="${autor.nome}"
               >Nome do Autor</a
@@ -277,7 +303,7 @@
         <div class="keywords" th:if="${!page.temas.isEmpty()}">
           <span
             th:each="tema : ${page.temas}"
-            style="background: #dbeafe; color: #1e40af"
+            style="background: #dbeafe; color: var(--hd)"
             class="keyword-badge"
             th:text="${tema}"
             >Tema</span
@@ -297,6 +323,45 @@
         </div>
       </div>
 
+      <div class="card" th:if="${!page.documentos.isEmpty()}">
+        <div class="section-title" th:text="${'Documentos Oficiais (' + page.documentos.size() + ')'}">Documentos Oficiais</div>
+        <div class="list-stack">
+          <div class="list-item" th:each="documento : ${page.documentos}">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+              <a class="list-title" th:href="${documento.url}" target="_blank" rel="noopener noreferrer" th:text="${documento.titulo}">Inteiro teor</a>
+              <span class="badge badge-neutral" th:if="${documento.origem != null}" th:text="${documento.origem}">Fonte oficial</span>
+            </div>
+            <div class="list-meta" th:if="${documento.data != null}" th:text="${documento.data}">01/01/2024</div>
+            <p class="list-desc" th:if="${documento.descricao != null}" th:text="${documento.descricao}">Descrição</p>
+          </div>
+        </div>
+      </div>
+
+        <div class="card" th:if="${!page.votacoes.isEmpty()}">
+          <div class="section-title" th:text="${'Resumo de Votações (' + page.votacoes.size() + ')'}">Resumo de Votações</div>
+          <div class="list-stack">
+            <div class="list-item" th:each="votacao : ${page.votacoes}">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap;">
+                <span class="list-title" th:text="${votacao.resultado}">Aprovada</span>
+                <span class="badge badge-neutral" th:if="${votacao.orgao != null}" th:text="${votacao.orgao}">PLEN</span>
+              </div>
+              <div class="list-meta" th:text="${votacao.data != null ? votacao.data + ' · ' + votacao.placar : votacao.placar}">01/01/2024 · 10 sim</div>
+              <p class="list-desc" th:if="${votacao.descricao != null}" th:text="${votacao.descricao}">Descrição</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" th:if="${!page.relacionadas.isEmpty()}">
+          <div class="section-title" th:text="${'Proposições Relacionadas (' + page.relacionadas.size() + ')'}">Proposições Relacionadas</div>
+          <div class="list-stack">
+            <div class="list-item" th:each="relacionada : ${page.relacionadas}">
+              <a class="list-title" th:href="${relacionada.url}" th:text="${relacionada.titulo}">PL 123/2024</a>
+              <div class="list-meta" th:text="${relacionada.casaLabel}">Câmara dos Deputados</div>
+              <p class="list-desc" th:if="${relacionada.ementa != null}" th:text="${relacionada.ementa}">Ementa</p>
+            </div>
+          </div>
+        </div>
+
       <!-- Dado JSON embutido para hidratação Vue ───────────────────────── -->
       <script
         th:if="${page.proposicaoJsonEmbutido != null and !#strings.isEmpty(page.proposicaoJsonEmbutido)}"
@@ -305,17 +370,16 @@
         th:utext="${page.proposicaoJsonEmbutido}"
       ></script>
 
-      <!-- Nota: abas Votações, Documentos, Relacionadas são carregadas dinamicamente pelo Vue -->
       <p
         style="
           font-size: 0.75rem;
-          color: #9ca3af;
+          color: var(--txm);
           text-align: center;
           margin-top: 2rem;
         "
       >
         Página gerada em <span th:text="${page.geradoEm}"></span> ·
-        <a href="/proposicoes">Ver todas as proposições</a>
+        <a href="/stat-proposicoes/">Ver todas as proposições</a>
       </p>
     </div>
   </body>

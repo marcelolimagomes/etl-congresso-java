@@ -13,7 +13,7 @@ import lombok.Data;
 @Data
 public class CamaraDeputadoOcupacaoCSVRow {
 
-    @CsvBindByName(column = "idDeputado")
+    @CsvBindByName(column = "id")
     private String idDeputado;
 
     @CsvBindByName(column = "titulo")

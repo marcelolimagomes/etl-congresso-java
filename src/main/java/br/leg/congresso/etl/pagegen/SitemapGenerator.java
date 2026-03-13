@@ -63,9 +63,9 @@ public class SitemapGenerator {
                         : today;
 
                 sb.append("  <url>\n");
-                sb.append("    <loc>").append(BASE_URL).append("/proposicoes/")
+                sb.append("    <loc>").append(BASE_URL).append("/stat-proposicoes/")
                         .append(casa).append("-").append(prop.getIdOrigem())
-                        .append("</loc>\n");
+                        .append("/</loc>\n");
                 sb.append("    <lastmod>").append(lastmod).append("</lastmod>\n");
                 sb.append("    <changefreq>weekly</changefreq>\n");
                 sb.append("    <priority>").append(priority).append("</priority>\n");

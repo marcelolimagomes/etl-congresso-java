@@ -189,4 +189,14 @@ public class SilverCamaraDeputado {
 
     @Column(name = "det_gabinete_email", length = 200)
     private String detGabineteEmail;
+
+    public String getContatoEmail() {
+        if (detStatusEmail != null && !detStatusEmail.isBlank()) {
+            return detStatusEmail;
+        }
+        if (detGabineteEmail != null && !detGabineteEmail.isBlank()) {
+            return detGabineteEmail;
+        }
+        return null;
+    }
 }

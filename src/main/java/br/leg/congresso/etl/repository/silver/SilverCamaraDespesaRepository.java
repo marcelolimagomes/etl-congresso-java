@@ -24,4 +24,6 @@ public interface SilverCamaraDespesaRepository extends JpaRepository<SilverCamar
      */
     boolean existsByCamaraDeputadoIdAndCodDocumentoAndNumDocumentoAndParcela(
             String camaraDeputadoId, String codDocumento, String numDocumento, String parcela);
+
+    java.util.List<SilverCamaraDespesa> findByCamaraDeputadoId(String camaraDeputadoId);
 }

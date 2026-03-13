@@ -9,15 +9,19 @@ import lombok.Data;
  * URL:
  * https://dadosabertos.camara.leg.br/arquivos/orgaosDeputados/csv/orgaosDeputados-L{leg}.csv
  * Separador: ponto-e-vírgula (;).
+ *
+ * Nota: CSV não possui colunas idDeputado/idOrgao diretamente;
+ * os IDs são extraídos de uriDeputado e uriOrgao respectivamente.
  */
 @Data
 public class CamaraDeputadoOrgaoCSVRow {
 
-    @CsvBindByName(column = "idDeputado")
     private String idDeputado;
 
-    @CsvBindByName(column = "idOrgao")
     private String idOrgao;
+
+    @CsvBindByName(column = "uriDeputado")
+    private String uriDeputado;
 
     @CsvBindByName(column = "siglaOrgao")
     private String siglaOrgao;
@@ -25,13 +29,12 @@ public class CamaraDeputadoOrgaoCSVRow {
     @CsvBindByName(column = "nomeOrgao")
     private String nomeOrgao;
 
-    @CsvBindByName(column = "nomePublicacao")
+    @CsvBindByName(column = "nomePublicacaoOrgao")
     private String nomePublicacao;
 
-    @CsvBindByName(column = "titulo")
+    @CsvBindByName(column = "cargo")
     private String titulo;
 
-    @CsvBindByName(column = "codTitulo")
     private String codTitulo;
 
     @CsvBindByName(column = "dataInicio")
@@ -42,4 +45,28 @@ public class CamaraDeputadoOrgaoCSVRow {
 
     @CsvBindByName(column = "uriOrgao")
     private String uriOrgao;
+
+    public String getIdDeputado() {
+        if (idDeputado == null && uriDeputado != null) {
+            idDeputado = extrairIdDaUri(uriDeputado);
+        }
+        return idDeputado;
+    }
+
+    public String getIdOrgao() {
+        if (idOrgao == null && uriOrgao != null) {
+            idOrgao = extrairIdDaUri(uriOrgao);
+        }
+        return idOrgao;
+    }
+
+    private static String extrairIdDaUri(String uri) {
+        if (uri != null && !uri.isBlank()) {
+            int idx = uri.lastIndexOf('/');
+            if (idx >= 0 && idx < uri.length() - 1) {
+                return uri.substring(idx + 1);
+            }
+        }
+        return null;
+    }
 }

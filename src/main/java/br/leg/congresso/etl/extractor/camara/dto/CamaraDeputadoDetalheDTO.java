@@ -2,6 +2,7 @@ package br.leg.congresso.etl.extractor.camara.dto;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.Data;
@@ -52,6 +53,7 @@ public class CamaraDeputadoDetalheDTO {
         private Gabinete gabinete;
         private String situacao;
         private String condicaoEleitoral;
+        @JsonAlias("descricaoStatus")
         private String descricao;
     }
 

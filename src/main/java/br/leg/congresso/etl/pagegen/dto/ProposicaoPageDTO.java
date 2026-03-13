@@ -50,6 +50,14 @@ public class ProposicaoPageDTO {
     @Builder.Default
     List<TramitacaoDTO> tramitacoes = List.of();
 
+    // ── Conteúdo relacionado ─────────────────────────────────────────────────
+    @Builder.Default
+    List<DocumentoResumoDTO> documentos = List.of();
+    @Builder.Default
+    List<ProposicaoResumoDTO> relacionadas = List.of();
+    @Builder.Default
+    List<VotacaoResumoDTO> votacoes = List.of();
+
     // ── SEO ───────────────────────────────────────────────────────────────────
     String canonicalUrl;
     String seoTitle;

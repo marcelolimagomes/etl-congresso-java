@@ -11,4 +11,6 @@ import br.leg.congresso.etl.domain.silver.SilverSenadoDocumento;
 public interface SilverSenadoDocumentoRepository extends JpaRepository<SilverSenadoDocumento, UUID> {
 
     boolean existsBySenadoMateriaIdAndCodigoDocumento(UUID senadoMateriaId, String codigoDocumento);
+
+    java.util.List<SilverSenadoDocumento> findBySenadoMateriaId(UUID senadoMateriaId);
 }

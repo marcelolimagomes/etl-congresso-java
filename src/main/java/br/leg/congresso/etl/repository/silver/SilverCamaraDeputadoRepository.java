@@ -25,6 +25,25 @@ public interface SilverCamaraDeputadoRepository extends JpaRepository<SilverCama
      */
     List<SilverCamaraDeputado> findByDetStatusIdIsNull();
 
+        @Query("SELECT COUNT(d) FROM SilverCamaraDeputado d")
+        long countDeputados();
+
+        @Query("SELECT COUNT(d) FROM SilverCamaraDeputado d WHERE d.detStatusId IS NULL")
+        long countPendentesEnriquecimento();
+
+        @Query("""
+            SELECT COUNT(d) FROM SilverCamaraDeputado d
+            WHERE COALESCE(NULLIF(TRIM(d.detStatusEmail), ''), NULLIF(TRIM(d.detGabineteEmail), '')) IS NOT NULL
+            """)
+        long countComContatoEmail();
+
+        @Query("""
+            SELECT COUNT(d) FROM SilverCamaraDeputado d
+            WHERE d.detStatusSituacao = 'Exercício'
+              AND COALESCE(NULLIF(TRIM(d.detStatusEmail), ''), NULLIF(TRIM(d.detGabineteEmail), '')) IS NULL
+            """)
+        long countEmExercicioSemContatoEmail();
+
     @Query("SELECT COUNT(d) FROM SilverCamaraDeputado d WHERE d.goldSincronizado = false")
     long countPendentesPromocao();
 

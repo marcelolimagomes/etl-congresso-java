@@ -14,14 +14,14 @@ import lombok.Data;
 @Data
 public class CamaraDeputadoFrenteCSVRow {
 
-    @CsvBindByName(column = "idDeputado")
+    @CsvBindByName(column = "deputado_.id")
     private String idDeputado;
 
     /** id da frente parlamentar (coluna "id" no CSV) */
     @CsvBindByName(column = "id")
     private String idFrente;
 
-    @CsvBindByName(column = "idLegislatura")
+    @CsvBindByName(column = "deputado_.idLegislatura")
     private String idLegislatura;
 
     @CsvBindByName(column = "titulo")

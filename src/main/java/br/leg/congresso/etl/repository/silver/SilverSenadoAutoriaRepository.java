@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
@@ -15,4 +17,13 @@ public interface SilverSenadoAutoriaRepository extends JpaRepository<SilverSenad
             UUID senadoMateriaId, String nomeAutor, String codigoTipoAutor);
 
     List<SilverSenadoAutoria> findBySenadoMateriaId(UUID senadoMateriaId);
+
+        @Query("""
+            select a from SilverSenadoAutoria a
+            join fetch a.senadoMateria m
+            where a.codigoParlamentar = :codigoParlamentar
+            order by m.ano desc, m.numero desc
+            """)
+        List<SilverSenadoAutoria> findByCodigoParlamentarOrderByMateriaDesc(
+            @Param("codigoParlamentar") String codigoParlamentar);
 }

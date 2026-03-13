@@ -149,7 +149,7 @@ ensure_postgres_container() {
 }
 
 wait_for_app() {
-  local retries=45
+  local retries=75
   local sleep_seconds=2
   for ((i=1; i<=retries; i++)); do
     if curl -sf "$APP_BASE_URL/actuator/health" >/dev/null; then
@@ -170,42 +170,81 @@ start_java_app_if_needed() {
     return 0
   fi
 
-  local mvn_cmd
-  mvn_cmd="$(command -v mvn || true)"
-  if [[ -z "$mvn_cmd" ]]; then
-    mvn_cmd="/tmp/apache-maven-3.9.9/bin/mvn"
-  fi
-  [[ -x "$mvn_cmd" ]] || die "Maven não encontrado. Configure mvn ou /tmp/apache-maven-3.9.9/bin/mvn"
-
-  local java_home
-  java_home="$(dirname "$(dirname "$(readlink -f "$(command -v java)")")")"
-  [[ -d "$java_home" ]] || die "Não foi possível detectar JAVA_HOME"
-
   resolve_runtime_log_dir
   local app_log_file="$RUNTIME_LOG_DIR/ingest-host.log"
   local app_pid_file="$RUNTIME_LOG_DIR/ingest-host.pid"
 
-  info "Iniciando Java no host com profile '$SPRING_PROFILE'..."
-  (
-    cd "$ROOT_DIR"
-    JAVA_HOME="$java_home" \
-    SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5433/etl_congresso}" \
-    SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-etl_user}" \
-    SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-etl_pass}" \
-    ADMIN_USERNAME="$ADMIN_USERNAME" \
-    ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    ETL_CAMARA_BASE_URL="${ETL_CAMARA_BASE_URL:-https://dadosabertos.camara.leg.br}" \
-    ETL_CAMARA_CSV_BASE_URL="${ETL_CAMARA_CSV_BASE_URL:-https://dadosabertos.camara.leg.br/arquivos}" \
-    ETL_SENADO_BASE_URL="${ETL_SENADO_BASE_URL:-https://legis.senado.leg.br}" \
-    "$mvn_cmd" -q spring-boot:run -Dspring-boot.run.profiles="$SPRING_PROFILE" \
-      > "$app_log_file" 2>&1 &
-    echo $! > "$app_pid_file"
-  )
+  local java_cmd
+  java_cmd="$(command -v java || true)"
+  [[ -x "$java_cmd" ]] || die "Java não encontrado em PATH"
+
+  # Extrai a porta do APP_BASE_URL para passar como server.port ao Spring Boot
+  local app_port
+  app_port="$(echo "$APP_BASE_URL" | sed -E 's|.*:([0-9]+)/?$|\1|')"
+  [[ "$app_port" =~ ^[0-9]+$ ]] || app_port="8080"
+
+  # Procura JAR já construído (exclui *-original.jar e *-sources.jar)
+  local jar_file
+  jar_file="$(ls "$ROOT_DIR"/target/*.jar 2>/dev/null \
+    | grep -v -E '(original|sources|javadoc)\.jar$' \
+    | head -1)"
+
+  if [[ -n "$jar_file" && -f "$jar_file" ]]; then
+    info "Iniciando aplicação via JAR no host (profile '$SPRING_PROFILE', porta $app_port)..."
+    info "JAR: $jar_file"
+    (
+      cd "$ROOT_DIR"
+      SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5433/etl_congresso}" \
+      SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-etl_user}" \
+      SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-etl_pass}" \
+      ADMIN_USERNAME="$ADMIN_USERNAME" \
+      ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+      ETL_CAMARA_BASE_URL="${ETL_CAMARA_BASE_URL:-https://dadosabertos.camara.leg.br}" \
+      ETL_CAMARA_CSV_BASE_URL="${ETL_CAMARA_CSV_BASE_URL:-https://dadosabertos.camara.leg.br/arquivos}" \
+      ETL_SENADO_BASE_URL="${ETL_SENADO_BASE_URL:-https://legis.senado.leg.br}" \
+      "$java_cmd" \
+        -Dspring.profiles.active="$SPRING_PROFILE" \
+        -Dserver.port="$app_port" \
+        -jar "$jar_file" \
+        > "$app_log_file" 2>&1 &
+      echo $! > "$app_pid_file"
+    )
+  else
+    # Nenhum JAR disponível — compila e executa via Maven Wrapper
+    local mvn_cmd="$ROOT_DIR/mvnw"
+    [[ -x "$mvn_cmd" ]] || die "Maven Wrapper não encontrado ou sem permissão de execução: $mvn_cmd"
+
+    local java_home
+    java_home="$(dirname "$(dirname "$(readlink -f "$java_cmd")")")"
+    [[ -d "$java_home" ]] || die "Não foi possível detectar JAVA_HOME a partir de $java_cmd"
+
+    info "Nenhum JAR encontrado em target/. Iniciando via Maven Wrapper (porta $app_port)..."
+    info "mvnw: $mvn_cmd  |  JAVA_HOME: $java_home"
+    (
+      cd "$ROOT_DIR"
+      JAVA_HOME="$java_home" \
+      SPRING_DATASOURCE_URL="${SPRING_DATASOURCE_URL:-jdbc:postgresql://localhost:5433/etl_congresso}" \
+      SPRING_DATASOURCE_USERNAME="${SPRING_DATASOURCE_USERNAME:-etl_user}" \
+      SPRING_DATASOURCE_PASSWORD="${SPRING_DATASOURCE_PASSWORD:-etl_pass}" \
+      ADMIN_USERNAME="$ADMIN_USERNAME" \
+      ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+      ETL_CAMARA_BASE_URL="${ETL_CAMARA_BASE_URL:-https://dadosabertos.camara.leg.br}" \
+      ETL_CAMARA_CSV_BASE_URL="${ETL_CAMARA_CSV_BASE_URL:-https://dadosabertos.camara.leg.br/arquivos}" \
+      ETL_SENADO_BASE_URL="${ETL_SENADO_BASE_URL:-https://legis.senado.leg.br}" \
+      "$mvn_cmd" -q spring-boot:run \
+        -Dspring-boot.run.profiles="$SPRING_PROFILE" \
+        -Dspring-boot.run.jvmArguments="-Dserver.port=$app_port" \
+        > "$app_log_file" 2>&1 &
+      echo $! > "$app_pid_file"
+    )
+  fi
+
   APP_PID="$(cat "$app_pid_file")"
   APP_STARTED_BY_SCRIPT="true"
 
   info "Aguardando aplicação subir em $APP_BASE_URL ..."
-  wait_for_app || die "Aplicação não respondeu em $APP_BASE_URL/actuator/health"
+  info "Log: $app_log_file"
+  wait_for_app || die "Aplicação não respondeu em $APP_BASE_URL/actuator/health. Verifique: $app_log_file"
   info "Aplicação disponível."
 }
 

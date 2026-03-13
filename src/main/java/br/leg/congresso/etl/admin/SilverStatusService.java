@@ -18,6 +18,7 @@ public class SilverStatusService {
 
     private final SilverCamaraProposicaoRepository camaraProposicaoRepository;
     private final SilverCamaraTramitacaoRepository camaraTramitacaoRepository;
+    private final SilverCamaraDeputadoRepository camaraDeputadoRepository;
     private final SilverSenadoMateriaRepository senadoMateriaRepository;
     private final SilverSenadoMovimentacaoRepository senadoMovimentacaoRepository;
     private final ProposicaoRepository proposicaoRepository;
@@ -30,6 +31,11 @@ public class SilverStatusService {
     @Transactional(readOnly = true)
     public SilverStatusDTO calcularStatus(Integer ano) {
         boolean comFiltroAno = ano != null;
+
+        long camaraDeputados = camaraDeputadoRepository.countDeputados();
+        long camaraDeputadosPendentesEnriquecimento = camaraDeputadoRepository.countPendentesEnriquecimento();
+        long camaraDeputadosComContatoEmail = camaraDeputadoRepository.countComContatoEmail();
+        long camaraDeputadosEmExercicioSemContatoEmail = camaraDeputadoRepository.countEmExercicioSemContatoEmail();
 
         long camaraProposicoes   = comFiltroAno ? camaraProposicaoRepository.countByAno(ano) : camaraProposicaoRepository.count();
         long camaraTramitacoes   = comFiltroAno ? camaraTramitacaoRepository.countByProposicaoAno(ano) : camaraTramitacaoRepository.count();
@@ -48,6 +54,10 @@ public class SilverStatusService {
 
         return new SilverStatusDTO(
             ano,
+            camaraDeputados,
+            camaraDeputadosPendentesEnriquecimento,
+            camaraDeputadosComContatoEmail,
+            camaraDeputadosEmExercicioSemContatoEmail,
             camaraProposicoes,
             camaraTramitacoes,
             senadoMaterias,

@@ -49,10 +49,17 @@ public class SenadorPageDTO {
     private String facebook;
     private String twitter;
 
+    // ── Atuação legislativa ──────────────────────────────────────────────────
+
+    private List<ProposicaoResumoDTO> autoriasRecentes;
+    private List<ProposicaoResumoDTO> relatoriasRecentes;
+
     // ── SEO / meta ────────────────────────────────────────────────────────────
 
     private String canonicalUrl;
     private String seoTitle;
     private String seoDescription;
+    private String schemaOrgPersonJson;
+    private String schemaOrgBreadcrumbJson;
     private String geradoEm;
 }
