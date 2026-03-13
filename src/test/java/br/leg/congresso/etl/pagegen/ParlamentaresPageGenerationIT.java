@@ -95,24 +95,28 @@ class ParlamentaresPageGenerationIT {
 
         assertThat(total).containsExactly(1, 0);
 
-        Path htmlFile = tempOutputDir.resolve("parlamentares/camara-204554/index.html");
+        Path htmlFile = tempOutputDir.resolve("stat-parlamentares/camara-204554/index.html");
         assertThat(htmlFile).exists();
         assertThat(tempOutputDir.resolve("parlamentares/deputados/204554/index.html")).doesNotExist();
 
         String html = Files.readString(htmlFile, StandardCharsets.UTF_8);
         assertThat(html).contains("Maria da Silva");
         assertThat(html).contains("maria@camara.leg.br");
-        assertThat(html).contains("https://www.translegis.com.br/parlamentares/camara-204554");
-        assertThat(html).contains("href=\"/parlamentares/\"");
+        assertThat(html).contains("https://www.translegis.com.br/stat-parlamentares/camara-204554");
+        assertThat(html).contains("href=\"/stat-parlamentares/\"");
         assertThat(html).contains("application/ld+json");
         assertThat(html).contains("\"@type\":\"Person\"");
         assertThat(html).contains("\"@type\":\"BreadcrumbList\"");
+        assertThat(html).contains("name=\"google-adsense-account\"");
+        assertThat(html).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+        assertThat(html).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+        assertThat(html).contains("gtag('config', 'G-RR9S2KQ44D')");
         assertThat(tempOutputDir.resolve("parlamentares/indice/data/page-1.json")).exists();
         assertThat(tempOutputDir.resolve("parlamentares/indice/data/meta.json")).exists();
         Path sitemap = tempOutputDir.resolve("sitemap-parlamentares.xml");
         assertThat(sitemap).exists();
         assertThat(Files.readString(sitemap, StandardCharsets.UTF_8))
-            .contains("https://www.translegis.com.br/parlamentares/camara-204554");
+            .contains("https://www.translegis.com.br/stat-parlamentares/camara-204554");
     }
 
     @Test
@@ -137,22 +141,26 @@ class ParlamentaresPageGenerationIT {
 
         assertThat(total).containsExactly(0, 1);
 
-        Path htmlFile = tempOutputDir.resolve("parlamentares/senado-5529/index.html");
+        Path htmlFile = tempOutputDir.resolve("stat-parlamentares/senado-5529/index.html");
         assertThat(htmlFile).exists();
         assertThat(tempOutputDir.resolve("parlamentares/senadores/5529/index.html")).doesNotExist();
 
         String html = Files.readString(htmlFile, StandardCharsets.UTF_8);
         assertThat(html).contains("Carlos Souza");
-        assertThat(html).contains("https://www.translegis.com.br/parlamentares/senado-5529");
-        assertThat(html).contains("href=\"/parlamentares/\"");
+        assertThat(html).contains("https://www.translegis.com.br/stat-parlamentares/senado-5529");
+        assertThat(html).contains("href=\"/stat-parlamentares/\"");
         assertThat(html).contains("application/ld+json");
         assertThat(html).contains("\"@type\":\"Person\"");
         assertThat(html).contains("\"@type\":\"BreadcrumbList\"");
+        assertThat(html).contains("name=\"google-adsense-account\"");
+        assertThat(html).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+        assertThat(html).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+        assertThat(html).contains("gtag('config', 'G-RR9S2KQ44D')");
         assertThat(tempOutputDir.resolve("parlamentares/indice/data/page-1.json")).exists();
         assertThat(tempOutputDir.resolve("parlamentares/indice/data/meta.json")).exists();
         Path sitemap = tempOutputDir.resolve("sitemap-parlamentares.xml");
         assertThat(sitemap).exists();
         assertThat(Files.readString(sitemap, StandardCharsets.UTF_8))
-            .contains("https://www.translegis.com.br/parlamentares/senado-5529");
+            .contains("https://www.translegis.com.br/stat-parlamentares/senado-5529");
     }
 }

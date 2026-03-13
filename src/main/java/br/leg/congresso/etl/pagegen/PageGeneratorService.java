@@ -36,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
  * <li>Para cada proposição, monta o DTO via
  * {@link ProposicaoPageAssembler}</li>
  * <li>Renderiza o HTML via {@link ThymeleafRenderer}</li>
- * <li>Grava em {@code outputDir/proposicoes/{casa}-{idOrigem}/index.html}</li>
+ * <li>Grava em {@code outputDir/stat-proposicoes/{casa}-{idOrigem}/index.html}</li>
  * </ol>
  *
  * <p>
@@ -62,7 +62,6 @@ public class PageGeneratorService {
     /** Número de itens por página no índice de proposições. */
     private static final int INDEX_PAGE_SIZE = 100;
 
-    private static final String BASE_URL = "https://www.translegis.com.br";
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /**
@@ -297,10 +296,9 @@ public class PageGeneratorService {
           .append("  <title>\u00cdndice de Proposi\u00e7\u00f5es Legislativas \u2014 Transpar\u00eancia Legislativa</title>\n")
           .append("  <meta name=\"description\" content=\"Lista completa de ").append(total)
           .append(" proposi\u00e7\u00f5es do Congresso Nacional.\" />\n")
-          .append("  <link rel=\"canonical\" href=\"https://www.translegis.com.br/stat-proposicoes/\" />\n")
-          .append("  <script>(function(){try{var m=localStorage.getItem('nuxt-color-mode')||'light';")
-          .append("if(m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches))")
-          .append("{document.documentElement.classList.add('dark');}}catch(e){}}());</script>\n")
+                    .append("  <link rel=\"canonical\" href=\"https://www.translegis.com.br/stat-proposicoes/\" />\n");
+                StaticPageGlobalHead.appendCommonHeadTags(sb);
+                sb
           .append("  <style>\n")
           .append("    :root{--bg:#f9fafb;--bgc:#fff;--tx:#111827;--txm:#6b7280;--bd:#e5e7eb;--hd:#1a4480;--lk:#3b82f6;--sp:#f3f4f6;}\n")
           .append("    :root.dark{--bg:#111827;--bgc:#1f2937;--tx:#f1f5f9;--txm:#9ca3af;--bd:#374151;--hd:#60a5fa;--lk:#93c5fd;--sp:#374151;}\n")

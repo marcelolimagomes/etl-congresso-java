@@ -1,0 +1,29 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+  <th:block th:fragment="common(globalHead)">
+    <meta
+      name="google-adsense-account"
+      th:content="${globalHead.googleAdsenseAccount}"
+    />
+    <meta name="robots" th:content="${globalHead.robotsContent}" />
+    <link rel="preconnect" th:href="${globalHead.sitePreconnectUrl}" />
+    <link
+      rel="preconnect"
+      th:href="${globalHead.adsensePreconnectUrl}"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preconnect"
+      th:href="${globalHead.analyticsPreconnectUrl}"
+      crossorigin="anonymous"
+    />
+    <script
+      th:src="${globalHead.googleAdsenseScriptSrc}"
+      async
+      crossorigin="anonymous"
+    ></script>
+    <script th:src="${globalHead.googleAnalyticsScriptSrc}" async></script>
+    <script th:utext="${globalHead.googleAnalyticsBootstrapScript}"></script>
+    <script th:utext="${globalHead.themeSyncScript}"></script>
+  </th:block>
+</html>

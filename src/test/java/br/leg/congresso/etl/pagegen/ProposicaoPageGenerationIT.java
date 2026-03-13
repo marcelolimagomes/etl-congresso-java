@@ -30,12 +30,14 @@ import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoAutor;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoTema;
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
 import br.leg.congresso.etl.domain.silver.SilverSenadoMateria;
+import br.leg.congresso.etl.domain.silver.SilverSenadoSenador;
 import br.leg.congresso.etl.repository.ProposicaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoTemaRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoSenadorRepository;
 
 /**
  * Teste de integração da geração de páginas HTML estáticas.
@@ -85,6 +87,9 @@ class ProposicaoPageGenerationIT {
     @Autowired
     private SilverSenadoAutoriaRepository silverSenadoAutoriaRepository;
 
+        @Autowired
+        private SilverSenadoSenadorRepository silverSenadoSenadorRepository;
+
     private Path tempOutputDir;
 
     @BeforeEach
@@ -115,6 +120,7 @@ class ProposicaoPageGenerationIT {
         silverCamaraProposicaoRepository.deleteAll();
         // Filhos Silver Senado
         silverSenadoAutoriaRepository.deleteAll();
+        silverSenadoSenadorRepository.deleteAll();
         // Pai Silver Senado
         silverSenadoMateriaRepository.deleteAll();
     }
@@ -140,7 +146,7 @@ class ProposicaoPageGenerationIT {
         int count = pageGeneratorService.generateAll();
         assertThat(count).isGreaterThanOrEqualTo(1);
 
-        Path htmlFile = tempOutputDir.resolve("proposicoes")
+        Path htmlFile = tempOutputDir.resolve("stat-proposicoes")
                 .resolve("camara-990001")
                 .resolve("index.html");
         assertThat(htmlFile).exists();
@@ -149,7 +155,7 @@ class ProposicaoPageGenerationIT {
         // SEO title no formato: {sigla} {numero}/{ano} — {casaLabel} | {siteName}
         assertThat(html).contains("PL 9901/2024 — Câmara dos Deputados | Transparência Legislativa");
         // Canonical URL
-        assertThat(html).contains("translegis.com.br/proposicoes/camara-990001");
+        assertThat(html).contains("translegis.com.br/stat-proposicoes/camara-990001/");
         // Casa label no corpo da página
         assertThat(html).contains("Câmara dos Deputados");
         // Ementa
@@ -160,6 +166,12 @@ class ProposicaoPageGenerationIT {
         assertThat(html).contains("\"@type\":\"BreadcrumbList\"");
         // Open Graph type (hardcoded no template)
         assertThat(html).contains("og:type").contains("article");
+                // Assets globais de SEO/monetização/analytics
+                assertThat(html).contains("name=\"google-adsense-account\"");
+                assertThat(html).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+                assertThat(html).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+                assertThat(html).contains("gtag('config', 'G-RR9S2KQ44D')");
+                assertThat(html).contains("name=\"robots\"");
     }
 
     @Test
@@ -180,7 +192,7 @@ class ProposicaoPageGenerationIT {
 
         pageGeneratorService.generateAll();
 
-        Path htmlFile = tempOutputDir.resolve("proposicoes")
+        Path htmlFile = tempOutputDir.resolve("stat-proposicoes")
                 .resolve("senado-990002")
                 .resolve("index.html");
         assertThat(htmlFile).exists();
@@ -212,7 +224,7 @@ class ProposicaoPageGenerationIT {
 
         pageGeneratorService.generateAll();
 
-        Path htmlFile = tempOutputDir.resolve("proposicoes")
+        Path htmlFile = tempOutputDir.resolve("stat-proposicoes")
                 .resolve("camara-990003")
                 .resolve("index.html");
         assertThat(htmlFile).exists();
@@ -221,7 +233,7 @@ class ProposicaoPageGenerationIT {
         // SEO title
         assertThat(html).contains("PEC 42/2023 — Câmara dos Deputados | Transparência Legislativa");
         // Canonical URL com slug correto
-        assertThat(html).contains("translegis.com.br/proposicoes/camara-990003");
+        assertThat(html).contains("translegis.com.br/stat-proposicoes/camara-990003/");
         // Texto da ementa exato
         assertThat(html).contains("Reforma do sistema tributário para testes de dados.");
         // Situação
@@ -282,13 +294,13 @@ class ProposicaoPageGenerationIT {
         pageGeneratorService.generateAll();
 
         String html = Files.readString(
-                tempOutputDir.resolve("proposicoes").resolve("camara-990005").resolve("index.html"),
+                tempOutputDir.resolve("stat-proposicoes").resolve("camara-990005").resolve("index.html"),
                 StandardCharsets.UTF_8);
 
         // Nome do autor da camada Silver
         assertThat(html).contains("João Silva IT");
         // Link para perfil do parlamentar na Câmara
-        assertThat(html).contains("/parlamentares/camara-204560");
+        assertThat(html).contains("/stat-parlamentares/camara-204560/");
         // Partido/UF do autor
         assertThat(html).contains("PT/SP");
         // Tema da camada Silver
@@ -321,6 +333,14 @@ class ProposicaoPageGenerationIT {
                         .ufParlamentar("RJ")
                         .build());
 
+        silverSenadoSenadorRepository.save(
+                SilverSenadoSenador.builder()
+                        .codigoSenador("9999")
+                        .nomeParlamentar("Maria Fontes IT")
+                        .ufParlamentar("RJ")
+                        .siglaPartidoParlamentar("MDB")
+                        .build());
+
         // Gold vinculado ao Silver Senado
         proposicaoRepository.save(Proposicao.builder()
                 .casa(CasaLegislativa.SENADO)
@@ -338,13 +358,13 @@ class ProposicaoPageGenerationIT {
         pageGeneratorService.generateAll();
 
         String html = Files.readString(
-                tempOutputDir.resolve("proposicoes").resolve("senado-990006").resolve("index.html"),
+                tempOutputDir.resolve("stat-proposicoes").resolve("senado-990006").resolve("index.html"),
                 StandardCharsets.UTF_8);
 
         // Nome da autora da camada Silver Senado
         assertThat(html).contains("Maria Fontes IT");
         // Link para perfil da parlamentar no Senado
-        assertThat(html).contains("/parlamentares/senado-9999");
+        assertThat(html).contains("/stat-parlamentares/senado-9999/");
         // Partido/UF
         assertThat(html).contains("MDB/RJ");
     }
@@ -369,7 +389,7 @@ class ProposicaoPageGenerationIT {
         pageGeneratorService.generateAll();
 
         String html = Files.readString(
-                tempOutputDir.resolve("proposicoes").resolve("camara-990007").resolve("index.html"),
+                tempOutputDir.resolve("stat-proposicoes").resolve("camara-990007").resolve("index.html"),
                 StandardCharsets.UTF_8);
 
         // Script de hidratação presente no HTML

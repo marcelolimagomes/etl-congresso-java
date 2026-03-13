@@ -60,8 +60,8 @@ class ParlamentaresSitemapGeneratorTest {
         Path sitemap = dir.resolve("sitemap-parlamentares.xml");
         String content = java.nio.file.Files.readString(sitemap);
         assertThat(sitemap).exists();
-        assertThat(content).contains("https://www.translegis.com.br/parlamentares/camara-204554");
-        assertThat(content).contains("https://www.translegis.com.br/parlamentares/senado-5529");
+        assertThat(content).contains("https://www.translegis.com.br/stat-parlamentares/camara-204554");
+        assertThat(content).contains("https://www.translegis.com.br/stat-parlamentares/senado-5529");
         assertThat(content).contains("<lastmod>2026-03-10</lastmod>");
         assertThat(content).contains("<lastmod>2026-03-11</lastmod>");
     }

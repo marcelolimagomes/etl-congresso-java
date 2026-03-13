@@ -488,10 +488,10 @@ pages-generate: ## Gera páginas estáticas de proposições (requer banco de da
 		-H "Authorization: Basic $$(echo -n '$(ADMIN_USERNAME):$(ADMIN_PASSWORD)' | base64)" \
 		| python3 -m json.tool
 
-pages-generate-ano: ## Gera páginas de um ano específico (ANO=2024)
-	curl -s -X POST "http://localhost:8080/admin/etl/pages/generate?ano=$(ANO)" \
-		-H "Authorization: Basic $$(echo -n '$(ADMIN_USERNAME):$(ADMIN_PASSWORD)' | base64)" \
-		| python3 -m json.tool
+pages-generate: ## Gera páginas; opcionalmente filtre por ano com ANO=2024
+  @./scripts/ingest.sh --env $${ENV:-host} --mode pages-generate \
+    $$( [ -n "$${ANO:-}" ] && echo --ano "$${ANO}" ) \
+    --proposicoes
 ```
 
 Adicionar ao `scripts/ingest.sh` como etapa opcional:

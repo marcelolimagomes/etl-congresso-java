@@ -1,5 +1,6 @@
 package br.leg.congresso.etl.pagegen;
 
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
@@ -46,7 +47,9 @@ public class ThymeleafRenderer {
     public String render(String templateName, Map<String, Object> variables) {
         log.debug("Renderizando template '{}' com {} variáveis", templateName, variables.size());
         var context = new Context(PT_BR);
-        context.setVariables(variables);
+        var mergedVariables = new HashMap<>(variables);
+        mergedVariables.putIfAbsent("globalHead", StaticPageGlobalHead.templateModel());
+        context.setVariables(mergedVariables);
         return engine.process(templateName, context);
     }
 }

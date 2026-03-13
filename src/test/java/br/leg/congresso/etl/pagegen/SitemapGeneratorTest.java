@@ -61,21 +61,21 @@ class SitemapGeneratorTest {
     class Urls {
 
         @Test
-        @DisplayName("URL de proposição da Câmara contém /proposicoes/camara-{id}")
+        @DisplayName("URL de proposição da Câmara contém /stat-proposicoes/camara-{id}")
         void urlCamara(@TempDir Path dir) throws IOException {
             mockProposicoes(List.of(makeProposicao(CasaLegislativa.CAMARA, "2342835")));
             generator.generate(dir);
             String xml = Files.readString(dir.resolve("sitemap-proposicoes.xml"));
-            assertThat(xml).contains("https://www.translegis.com.br/proposicoes/camara-2342835");
+            assertThat(xml).contains("https://www.translegis.com.br/stat-proposicoes/camara-2342835/");
         }
 
         @Test
-        @DisplayName("URL de proposição do Senado contém /proposicoes/senado-{id}")
+        @DisplayName("URL de proposição do Senado contém /stat-proposicoes/senado-{id}")
         void urlSenado(@TempDir Path dir) throws IOException {
             mockProposicoes(List.of(makeProposicao(CasaLegislativa.SENADO, "12345")));
             generator.generate(dir);
             String xml = Files.readString(dir.resolve("sitemap-proposicoes.xml"));
-            assertThat(xml).contains("https://www.translegis.com.br/proposicoes/senado-12345");
+            assertThat(xml).contains("https://www.translegis.com.br/stat-proposicoes/senado-12345/");
         }
 
         @Test

@@ -27,6 +27,7 @@ import br.leg.congresso.etl.domain.silver.SilverCamaraVotacao;
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
 import br.leg.congresso.etl.domain.silver.SilverSenadoDocumento;
 import br.leg.congresso.etl.domain.silver.SilverSenadoMateria;
+import br.leg.congresso.etl.domain.silver.SilverSenadoSenador;
 import br.leg.congresso.etl.domain.silver.SilverSenadoVotacao;
 import br.leg.congresso.etl.pagegen.dto.AutorDTO;
 import br.leg.congresso.etl.pagegen.dto.DocumentoResumoDTO;
@@ -34,6 +35,7 @@ import br.leg.congresso.etl.pagegen.dto.ProposicaoPageDTO;
 import br.leg.congresso.etl.pagegen.dto.ProposicaoResumoDTO;
 import br.leg.congresso.etl.pagegen.dto.TramitacaoDTO;
 import br.leg.congresso.etl.pagegen.dto.VotacaoResumoDTO;
+import br.leg.congresso.etl.repository.ProposicaoRepository;
 import br.leg.congresso.etl.repository.TramitacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRelacionadaRepository;
@@ -43,6 +45,7 @@ import br.leg.congresso.etl.repository.silver.SilverCamaraVotacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoDocumentoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoSenadorRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoVotacaoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,8 +75,10 @@ public class ProposicaoPageAssembler {
     private static final DateTimeFormatter ISO_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     private static final String BASE_URL = "https://www.translegis.com.br";
+    private static final String CAMARA_FICHA_URL = "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=";
     private static final String SITE_NAME = "Transparência Legislativa";
 
+    private final ProposicaoRepository proposicaoRepository;
     private final TramitacaoRepository tramitacaoRepository;
     private final SilverCamaraProposicaoRepository silverCamaraProposicaoRepository;
     private final SilverCamaraProposicaoAutorRepository silverCamaraAutorRepository;
@@ -84,6 +89,7 @@ public class ProposicaoPageAssembler {
     private final SilverSenadoAutoriaRepository silverSenadoAutoriaRepository;
     private final SilverSenadoDocumentoRepository silverSenadoDocumentoRepository;
     private final SilverSenadoVotacaoRepository silverSenadoVotacaoRepository;
+    private final SilverSenadoSenadorRepository silverSenadoSenadorRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -210,6 +216,7 @@ public class ProposicaoPageAssembler {
                 .tipo(a.getTipoAutor())
                 .casa(isParlamentar ? "camara" : null)
                 .idOriginal(isParlamentar ? a.getIdDeputadoAutor() : null)
+            .perfilUrl(isParlamentar ? "/stat-parlamentares/camara-" + a.getIdDeputadoAutor() + "/" : null)
                 .proponente(Integer.valueOf(1).equals(a.getProponente()))
                 .partido(a.getSiglaPartidoAutor())
                 .uf(a.getSiglaUfAutor())
@@ -232,10 +239,23 @@ public class ProposicaoPageAssembler {
                 .tipo(a.getDescricaoTipoAutor())
                 .casa(isParlamentar ? "senado" : null)
                 .idOriginal(isParlamentar ? a.getCodigoParlamentar() : null)
+                .perfilUrl(resolvePerfilUrlAutorSenado(a))
                 .proponente(false)
                 .partido(a.getSiglaPartido())
                 .uf(a.getUfParlamentar())
                 .build();
+    }
+
+    private String resolvePerfilUrlAutorSenado(SilverSenadoAutoria autoria) {
+        if (autoria.getCodigoParlamentar() == null || autoria.getCodigoParlamentar().isBlank()) {
+            return null;
+        }
+        String codigoParlamentar = autoria.getCodigoParlamentar();
+        Optional<SilverSenadoSenador> senador = silverSenadoSenadorRepository.findByCodigoSenador(codigoParlamentar);
+        if (senador.isPresent()) {
+            return "/stat-parlamentares/senado-" + codigoParlamentar + "/";
+        }
+        return null;
     }
 
     // ── Temas ─────────────────────────────────────────────────────────────────
@@ -402,10 +422,17 @@ public class ProposicaoPageAssembler {
                 .titulo(titulo)
                 .ementa(relacionada.getRelacionadaEmenta())
                 .situacao("Relacionada")
-                .url("/stat-proposicoes/camara-" + relacionada.getRelacionadaId() + "/")
+                .url(resolveRelacionadaCamaraUrl(relacionada))
                 .casa("camara")
                 .casaLabel("Câmara dos Deputados")
                 .build();
+    }
+
+    private String resolveRelacionadaCamaraUrl(SilverCamaraProposicaoRelacionada relacionada) {
+        String relacionadaId = String.valueOf(relacionada.getRelacionadaId());
+        return proposicaoRepository.findByCasaAndIdOrigem(CasaLegislativa.CAMARA, relacionadaId)
+                .map(proposicao -> "/stat-proposicoes/camara-" + relacionadaId + "/")
+                .orElse(CAMARA_FICHA_URL + relacionadaId);
     }
 
     private VotacaoResumoDTO toVotacaoResumo(SilverCamaraVotacao votacao) {

@@ -28,10 +28,13 @@ import br.leg.congresso.etl.domain.Proposicao;
 import br.leg.congresso.etl.domain.Tramitacao;
 import br.leg.congresso.etl.domain.enums.CasaLegislativa;
 import br.leg.congresso.etl.domain.enums.TipoProposicao;
+import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoRelacionada;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicao;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoAutor;
 import br.leg.congresso.etl.domain.silver.SilverCamaraProposicaoTema;
 import br.leg.congresso.etl.domain.silver.SilverSenadoAutoria;
+import br.leg.congresso.etl.domain.silver.SilverSenadoSenador;
+import br.leg.congresso.etl.repository.ProposicaoRepository;
 import br.leg.congresso.etl.repository.TramitacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRelacionadaRepository;
@@ -41,12 +44,15 @@ import br.leg.congresso.etl.repository.silver.SilverCamaraVotacaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoDocumentoRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoMateriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoSenadorRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoVotacaoRepository;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ProposicaoPageAssembler — montagem do DTO")
 class ProposicaoPageAssemblerTest {
 
+    @Mock
+    ProposicaoRepository proposicaoRepository;
     @Mock
     TramitacaoRepository tramitacaoRepository;
     @Mock
@@ -66,6 +72,8 @@ class ProposicaoPageAssemblerTest {
     @Mock
     SilverSenadoDocumentoRepository silverSenadoDocumentoRepository;
     @Mock
+    SilverSenadoSenadorRepository silverSenadoSenadorRepository;
+    @Mock
     SilverSenadoVotacaoRepository silverSenadoVotacaoRepository;
 
     @InjectMocks
@@ -78,6 +86,8 @@ class ProposicaoPageAssemblerTest {
             .thenReturn(List.of());
         when(silverSenadoDocumentoRepository.findBySenadoMateriaId(any())).thenReturn(List.of());
         when(silverSenadoVotacaoRepository.findBySenadoMateriaId(any())).thenReturn(List.of());
+        when(silverSenadoSenadorRepository.findByCodigoSenador(any())).thenReturn(Optional.empty());
+        when(proposicaoRepository.findByCasaAndIdOrigem(any(), any())).thenReturn(Optional.empty());
 
         // injeta ObjectMapper real para serialização JSON-LD
         var field = findField(ProposicaoPageAssembler.class, "objectMapper");
@@ -177,7 +187,56 @@ class ProposicaoPageAssemblerTest {
         void montaCanonicalUrl() {
             var dto = assembler.assemble(buildProposicaoCamara());
             assertThat(dto.getCanonicalUrl())
-                    .isEqualTo("https://www.translegis.com.br/proposicoes/camara-2342835");
+                .isEqualTo("https://www.translegis.com.br/stat-proposicoes/camara-2342835/");
+        }
+
+        @Test
+        @DisplayName("relacionadas sem página estática usam ficha oficial da Câmara")
+        void relacionadasSemPaginaEstaticaUsamFichaOficial() {
+            when(silverCamaraProposicaoRelacionadaRepository.findByProposicaoId("2342835"))
+                .thenReturn(List.of(SilverCamaraProposicaoRelacionada.builder()
+                    .proposicaoId("2342835")
+                    .relacionadaId(2533419)
+                    .relacionadaSiglaTipo("PRL")
+                    .relacionadaNumero("1")
+                    .relacionadaAno("0")
+                    .relacionadaEmenta("Parecer do relator")
+                    .build()));
+
+            var dto = assembler.assemble(buildProposicaoCamara());
+
+            assertThat(dto.getRelacionadas()).hasSize(1);
+            assertThat(dto.getRelacionadas().get(0).getUrl())
+                .isEqualTo("https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2533419");
+        }
+
+        @Test
+        @DisplayName("relacionadas com página estática usam rota local")
+        void relacionadasComPaginaEstaticaUsamRotaLocal() {
+            when(silverCamaraProposicaoRelacionadaRepository.findByProposicaoId("2342835"))
+                .thenReturn(List.of(SilverCamaraProposicaoRelacionada.builder()
+                    .proposicaoId("2342835")
+                    .relacionadaId(2533419)
+                    .relacionadaSiglaTipo("PRL")
+                    .relacionadaNumero("1")
+                    .relacionadaAno("0")
+                    .relacionadaEmenta("Parecer do relator")
+                    .build()));
+            when(proposicaoRepository.findByCasaAndIdOrigem(CasaLegislativa.CAMARA, "2533419"))
+                .thenReturn(Optional.of(Proposicao.builder()
+                    .id(UUID.randomUUID())
+                    .casa(CasaLegislativa.CAMARA)
+                    .tipo(TipoProposicao.LEI_ORDINARIA)
+                    .sigla("PRL")
+                    .numero(1)
+                    .ano(2024)
+                    .idOrigem("2533419")
+                    .build()));
+
+            var dto = assembler.assemble(buildProposicaoCamara());
+
+            assertThat(dto.getRelacionadas()).hasSize(1);
+            assertThat(dto.getRelacionadas().get(0).getUrl()).isEqualTo("/stat-proposicoes/camara-2533419/");
         }
 
         @Test
@@ -196,6 +255,7 @@ class ProposicaoPageAssemblerTest {
             assertThat(dto.getAutores().get(0).getNome()).isEqualTo("João Silva");
             assertThat(dto.getAutores().get(0).getCasa()).isEqualTo("camara");
             assertThat(dto.getAutores().get(0).getIdOriginal()).isEqualTo("204560");
+            assertThat(dto.getAutores().get(0).getPerfilUrl()).isEqualTo("/stat-parlamentares/camara-204560/");
             assertThat(dto.getAutores().get(0).isProponente()).isTrue();
         }
 
@@ -394,6 +454,19 @@ class ProposicaoPageAssemblerTest {
             assertThat(dto.getAutores()).hasSize(1);
             assertThat(dto.getAutores().get(0).getCasa()).isEqualTo("senado");
             assertThat(dto.getAutores().get(0).getNome()).isEqualTo("Maria Fontes");
+            assertThat(dto.getAutores().get(0).getPerfilUrl()).isNull();
+        }
+
+        @Test
+        @DisplayName("monta link de autor do Senado quando página estática do senador existe")
+        void montaLinkAutorSenadoQuandoPaginaExiste() {
+            when(silverSenadoSenadorRepository.findByCodigoSenador("1234"))
+                    .thenReturn(Optional.of(SilverSenadoSenador.builder().codigoSenador("1234").build()));
+
+            var dto = assembler.assemble(buildProposicaoSenado());
+
+            assertThat(dto.getAutores()).hasSize(1);
+            assertThat(dto.getAutores().get(0).getPerfilUrl()).isEqualTo("/stat-parlamentares/senado-1234/");
         }
 
         @Test

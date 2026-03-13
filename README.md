@@ -22,30 +22,42 @@ As páginas são salvas em `open-data/public/proposicoes/{casa}-{idOriginal}/ind
 | `ETL_PAGEGEN_OUTPUT_DIR` | `open-data/public` | Diretório raiz de saída               |
 | `ETL_PAGEGEN_BATCH_SIZE` | `500`              | Proposições por lote de processamento |
 
-### Via Makefile (requer app rodando em localhost:8080)
+### Via Makefile
 
 ```bash
-# Gerar todas as páginas
+# Gerar proposições e parlamentares
 make pages-generate
 
-# Gerar apenas as páginas de um ano específico
-make pages-generate-ano ANO=2024
+# Gerar proposições de um ano específico
+make pages-generate ANO=2024 PROPOSICOES=true PARLAMENTARES=false
 
-# Verificar status
+# Gerar apenas parlamentares
+make pages-generate PROPOSICOES=false PARLAMENTARES=true
+
+# Verificar status de proposições
 make pages-status
+
+# Verificar status de parlamentares
+make pages-status-parl
 ```
 
 ### Via script `ingest.sh`
 
 ```bash
-# Gerar todas as páginas
+# Gerar proposições e parlamentares
 ./scripts/ingest.sh --env host --mode pages-generate
 
-# Gerar por ano
-./scripts/ingest.sh --env host --mode pages-generate-ano --ano 2024
+# Gerar apenas proposições de 2024
+./scripts/ingest.sh --env host --mode pages-generate --ano 2024 --proposicoes
 
-# Verificar status
+# Gerar apenas parlamentares
+./scripts/ingest.sh --env host --mode pages-generate --parlamentares
+
+# Verificar status de proposições
 ./scripts/ingest.sh --env host --mode pages-status
+
+# Verificar status de parlamentares
+./scripts/ingest.sh --env host --mode pages-status-parl
 ```
 
 ### Via API REST (admin)

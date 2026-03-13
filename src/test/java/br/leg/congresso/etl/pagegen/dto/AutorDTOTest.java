@@ -16,6 +16,7 @@ class AutorDTOTest {
                 .tipo("Deputada Federal")
                 .casa("camara")
                 .idOriginal("204560")
+            .perfilUrl("/stat-parlamentares/camara-204560/")
                 .proponente(true)
                 .partido("PT")
                 .uf("SP")
@@ -25,6 +26,7 @@ class AutorDTOTest {
         assertThat(autor.getTipo()).isEqualTo("Deputada Federal");
         assertThat(autor.getCasa()).isEqualTo("camara");
         assertThat(autor.getIdOriginal()).isEqualTo("204560");
+        assertThat(autor.getPerfilUrl()).isEqualTo("/stat-parlamentares/camara-204560/");
         assertThat(autor.isProponente()).isTrue();
         assertThat(autor.getPartido()).isEqualTo("PT");
         assertThat(autor.getUf()).isEqualTo("SP");
@@ -41,6 +43,7 @@ class AutorDTOTest {
 
         assertThat(autor.getCasa()).isNull();
         assertThat(autor.getIdOriginal()).isNull();
+        assertThat(autor.getPerfilUrl()).isNull();
         assertThat(autor.isProponente()).isFalse();
     }
 
@@ -52,12 +55,14 @@ class AutorDTOTest {
                 .tipo("Senador")
                 .casa("senado")
                 .idOriginal("5555")
+            .perfilUrl("/stat-parlamentares/senado-5555/")
                 .partido("PL")
                 .uf("RJ")
                 .proponente(true)
                 .build();
 
         assertThat(autor.getCasa()).isEqualTo("senado");
+        assertThat(autor.getPerfilUrl()).isEqualTo("/stat-parlamentares/senado-5555/");
         assertThat(autor.getPartido()).isEqualTo("PL");
         assertThat(autor.getUf()).isEqualTo("RJ");
     }

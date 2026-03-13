@@ -2,10 +2,13 @@ package br.leg.congresso.etl.pagegen;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -33,7 +36,15 @@ import br.leg.congresso.etl.domain.silver.SilverCamaraDeputado;
 import br.leg.congresso.etl.domain.silver.SilverSenadoSenador;
 import br.leg.congresso.etl.pagegen.dto.DeputadoPageDTO;
 import br.leg.congresso.etl.pagegen.dto.SenadorPageDTO;
+import br.leg.congresso.etl.repository.ProposicaoRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraDeputadoFrenteRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraDeputadoOrgaoRepository;
 import br.leg.congresso.etl.repository.silver.SilverCamaraDeputadoRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraDespesaRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoAutorRepository;
+import br.leg.congresso.etl.repository.silver.SilverCamaraProposicaoRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoAutoriaRepository;
+import br.leg.congresso.etl.repository.silver.SilverSenadoRelatoriaRepository;
 import br.leg.congresso.etl.repository.silver.SilverSenadoSenadorRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +57,22 @@ class ParlamentaresPageGeneratorServiceTest {
     @Mock
     SilverSenadoSenadorRepository senadorRepository;
     @Mock
+    SilverCamaraDeputadoOrgaoRepository deputadoOrgaoRepository;
+    @Mock
+    SilverCamaraDeputadoFrenteRepository deputadoFrenteRepository;
+    @Mock
+    SilverCamaraDespesaRepository despesaRepository;
+    @Mock
+    SilverCamaraProposicaoAutorRepository proposicaoAutorRepository;
+    @Mock
+    SilverCamaraProposicaoRepository silverCamaraProposicaoRepository;
+    @Mock
+    SilverSenadoAutoriaRepository senadoAutoriaRepository;
+    @Mock
+    SilverSenadoRelatoriaRepository senadoRelatoriaRepository;
+    @Mock
+    ProposicaoRepository proposicaoRepository;
+    @Mock
     ThymeleafRenderer renderer;
     @Mock
     ParlamentaresSitemapGenerator sitemapGenerator;
@@ -55,6 +82,19 @@ class ParlamentaresPageGeneratorServiceTest {
     @InjectMocks
     ParlamentaresPageGeneratorService service;
 
+        private void mockDependenciasAuxiliaresVazias() {
+            lenient().when(deputadoOrgaoRepository.findByIdDeputadoOrderByDataInicioDesc(anyString(), any(PageRequest.class)))
+            .thenReturn(List.of());
+            lenient().when(deputadoFrenteRepository.findByIdDeputadoOrderByIdLegislaturaDescTituloAsc(anyString(), any(PageRequest.class)))
+            .thenReturn(List.of());
+            lenient().when(despesaRepository.findByCamaraDeputadoId(anyString())).thenReturn(List.of());
+            lenient().when(proposicaoAutorRepository.findByDeputadoAutorWithProposicao(anyString())).thenReturn(List.of());
+            lenient().when(silverCamaraProposicaoRepository.findAllByCamaraIdIn(any())).thenReturn(List.of());
+            lenient().when(senadoAutoriaRepository.findByCodigoParlamentarOrderByMateriaDesc(anyString())).thenReturn(List.of());
+            lenient().when(senadoRelatoriaRepository.findByCodigoParlamentarOrderByMateriaDesc(anyLong())).thenReturn(List.of());
+            lenient().when(proposicaoRepository.findByCasaAndIdOrigem(any(), anyString())).thenReturn(java.util.Optional.empty());
+        }
+
     @Nested
     @DisplayName("slugs de saída")
     class OutputPaths {
@@ -63,14 +103,14 @@ class ParlamentaresPageGeneratorServiceTest {
         @DisplayName("gera slug de deputado no formato usado pelo frontend")
         void deputadoSlug() {
             assertThat(ParlamentaresPageGeneratorService.buildDeputadoOutputPath("204554"))
-                    .isEqualTo("parlamentares/camara-204554");
+                    .isEqualTo("stat-parlamentares/camara-204554");
         }
 
         @Test
         @DisplayName("gera slug de senador no formato usado pelo frontend")
         void senadorSlug() {
             assertThat(ParlamentaresPageGeneratorService.buildSenadorOutputPath("5529"))
-                    .isEqualTo("parlamentares/senado-5529");
+                    .isEqualTo("stat-parlamentares/senado-5529");
         }
     }
 
@@ -103,15 +143,25 @@ class ParlamentaresPageGeneratorServiceTest {
                     .thenReturn(new PageImpl<>(List.<SilverCamaraDeputado>of(deputado), PageRequest.of(0, 100), 1));
             when(senadorRepository.findAll(PageRequest.of(0, 100)))
                     .thenReturn(new PageImpl<>(List.<SilverSenadoSenador>of(senador), PageRequest.of(0, 100), 1));
+                when(deputadoRepository.findAll()).thenReturn(List.of(deputado));
+                when(senadorRepository.findAll()).thenReturn(List.of(senador));
+                mockDependenciasAuxiliaresVazias();
             when(renderer.render(any(), any())).thenReturn("<html/>");
 
             int[] total = service.generateAll();
 
             assertThat(total).containsExactly(1, 1);
-            assertThat(dir.resolve("parlamentares/camara-204554/index.html")).exists();
-            assertThat(dir.resolve("parlamentares/senado-5529/index.html")).exists();
+            assertThat(dir.resolve("stat-parlamentares/camara-204554/index.html")).exists();
+            assertThat(dir.resolve("stat-parlamentares/senado-5529/index.html")).exists();
             assertThat(dir.resolve("parlamentares/deputados/204554/index.html")).doesNotExist();
             assertThat(dir.resolve("parlamentares/senadores/5529/index.html")).doesNotExist();
+            Path indexFile = dir.resolve("stat-parlamentares/index.html");
+            assertThat(indexFile).exists();
+            String indexHtml = java.nio.file.Files.readString(indexFile);
+            assertThat(indexHtml).contains("google-adsense-account");
+            assertThat(indexHtml).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+            assertThat(indexHtml).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+            assertThat(indexHtml).contains("gtag('config', 'G-RR9S2KQ44D')");
         }
 
         @Test
@@ -144,6 +194,9 @@ class ParlamentaresPageGeneratorServiceTest {
                     .thenReturn(new PageImpl<>(List.<SilverCamaraDeputado>of(deputado), PageRequest.of(0, 100), 1));
             when(senadorRepository.findAll(PageRequest.of(0, 100)))
                     .thenReturn(new PageImpl<>(List.<SilverSenadoSenador>of(senador), PageRequest.of(0, 100), 1));
+                when(deputadoRepository.findAll()).thenReturn(List.of(deputado));
+                when(senadorRepository.findAll()).thenReturn(List.of(senador));
+                mockDependenciasAuxiliaresVazias();
             when(renderer.render(any(), any())).thenReturn("<html/>");
 
             service.generateAll();
@@ -173,7 +226,9 @@ class ParlamentaresPageGeneratorServiceTest {
         when(senadorRepository.count()).thenReturn(0L);
         when(deputadoRepository.findAll(PageRequest.of(0, 100)))
             .thenReturn(new PageImpl<>(List.of(deputado), PageRequest.of(0, 100), 1));
+        when(deputadoRepository.findAll()).thenReturn(List.of(deputado));
         when(senadorRepository.findAll()).thenReturn(List.of());
+        mockDependenciasAuxiliaresVazias();
         when(renderer.render(any(), any())).thenReturn("<html/>");
 
         @SuppressWarnings("unchecked")
@@ -188,7 +243,7 @@ class ParlamentaresPageGeneratorServiceTest {
         assertThat(page.getSchemaOrgPersonJson()).contains("maria@camara.leg.br");
         assertThat(page.getEmail()).isEqualTo("maria@camara.leg.br");
         assertThat(page.getSchemaOrgBreadcrumbJson()).contains("\"@type\":\"BreadcrumbList\"");
-        assertThat(page.getSchemaOrgBreadcrumbJson()).contains("/parlamentares/");
+        assertThat(page.getSchemaOrgBreadcrumbJson()).contains("/stat-parlamentares/");
     }
 
     @Test
@@ -214,6 +269,8 @@ class ParlamentaresPageGeneratorServiceTest {
         when(deputadoRepository.findAll()).thenReturn(List.of());
         when(senadorRepository.findAll(PageRequest.of(0, 100)))
             .thenReturn(new PageImpl<>(List.of(senador), PageRequest.of(0, 100), 1));
+        when(senadorRepository.findAll()).thenReturn(List.of(senador));
+        mockDependenciasAuxiliaresVazias();
         when(renderer.render(any(), any())).thenReturn("<html/>");
 
         @SuppressWarnings("unchecked")
@@ -226,7 +283,7 @@ class ParlamentaresPageGeneratorServiceTest {
         assertThat(page.getSchemaOrgPersonJson()).contains("\"@type\":\"Person\"");
         assertThat(page.getSchemaOrgPersonJson()).contains("Carlos Teste");
         assertThat(page.getSchemaOrgBreadcrumbJson()).contains("\"@type\":\"BreadcrumbList\"");
-        assertThat(page.getSchemaOrgBreadcrumbJson()).contains("/parlamentares/");
+        assertThat(page.getSchemaOrgBreadcrumbJson()).contains("/stat-parlamentares/");
     }
     }
 
@@ -267,8 +324,8 @@ class ParlamentaresPageGeneratorServiceTest {
             assertThat(meta).exists();
             assertThat(page1Content).contains("camara-204554");
             assertThat(page1Content).contains("senado-5529");
-            assertThat(page1Content).contains("/parlamentares/camara-204554");
-            assertThat(page1Content).contains("/parlamentares/senado-5529");
+            assertThat(page1Content).contains("/stat-parlamentares/camara-204554/");
+            assertThat(page1Content).contains("/stat-parlamentares/senado-5529/");
             assertThat(metaContent).contains("\"totalDeputados\":1");
             assertThat(metaContent).contains("\"totalSenadores\":1");
         }

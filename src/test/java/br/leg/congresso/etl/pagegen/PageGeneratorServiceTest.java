@@ -60,7 +60,7 @@ class PageGeneratorServiceTest {
         @DisplayName("cria diretório e arquivo index.html")
         void criaArquivo(@TempDir Path dir) throws IOException {
             service.writeHtml(dir, "camara", "2342835", "<html>Teste</html>");
-            Path arquivo = dir.resolve("proposicoes/camara-2342835/index.html");
+            Path arquivo = dir.resolve("stat-proposicoes/camara-2342835/index.html");
             assertThat(arquivo).exists();
             assertThat(Files.readString(arquivo)).isEqualTo("<html>Teste</html>");
         }
@@ -70,7 +70,7 @@ class PageGeneratorServiceTest {
         void sobrescreve(@TempDir Path dir) throws IOException {
             service.writeHtml(dir, "camara", "1", "<html>v1</html>");
             service.writeHtml(dir, "camara", "1", "<html>v2</html>");
-            Path arquivo = dir.resolve("proposicoes/camara-1/index.html");
+            Path arquivo = dir.resolve("stat-proposicoes/camara-1/index.html");
             assertThat(Files.readString(arquivo)).isEqualTo("<html>v2</html>");
         }
 
@@ -78,7 +78,7 @@ class PageGeneratorServiceTest {
         @DisplayName("cria diretório pai automaticamente")
         void criaDiretorioPai(@TempDir Path dir) throws IOException {
             service.writeHtml(dir, "senado", "99999", "<html/>");
-            assertThat(dir.resolve("proposicoes/senado-99999")).isDirectory();
+            assertThat(dir.resolve("stat-proposicoes/senado-99999")).isDirectory();
         }
     }
 
@@ -107,8 +107,15 @@ class PageGeneratorServiceTest {
 
             assertThat(total).isEqualTo(2);
             verify(sitemapGenerator).generate(dir);
-            assertThat(dir.resolve("proposicoes/camara-111/index.html")).exists();
-            assertThat(dir.resolve("proposicoes/senado-222/index.html")).exists();
+            assertThat(dir.resolve("stat-proposicoes/camara-111/index.html")).exists();
+            assertThat(dir.resolve("stat-proposicoes/senado-222/index.html")).exists();
+            Path indexFile = dir.resolve("stat-proposicoes/index.html");
+            assertThat(indexFile).exists();
+            String indexHtml = Files.readString(indexFile);
+            assertThat(indexHtml).contains("google-adsense-account");
+            assertThat(indexHtml).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+            assertThat(indexHtml).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+            assertThat(indexHtml).contains("gtag('config', 'G-RR9S2KQ44D')");
         }
 
         @Test
@@ -267,7 +274,7 @@ class PageGeneratorServiceTest {
                 .idOriginal(idOriginal)
                 .siglaTipo("PL").descricaoTipo("Proj.").numero("1").ano(2024)
                 .ementa("E.")
-                .canonicalUrl("https://www.translegis.com.br/proposicoes/" + casa + "-" + idOriginal)
+                .canonicalUrl("https://www.translegis.com.br/stat-proposicoes/" + casa + "-" + idOriginal + "/")
                 .seoTitle("t").seoDescription("d")
                 .schemaOrgLegislationJson("{}").schemaOrgBreadcrumbJson("{}")
                 .geradoEm("2024-01-01")

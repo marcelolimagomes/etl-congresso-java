@@ -52,6 +52,7 @@ class ThymeleafRendererTest {
                                 .tipo("Deputado Federal")
                                 .casa("camara")
                                 .idOriginal("204560")
+                            .perfilUrl("/stat-parlamentares/camara-204560/")
                                 .proponente(true)
                                 .partido("PT")
                                 .uf("SP")
@@ -65,7 +66,7 @@ class ThymeleafRendererTest {
                                 .situacao("Em tramitação")
                                 .despacho("Encaminhar à CCJ para análise.")
                                 .build()))
-                .canonicalUrl("https://www.translegis.com.br/proposicoes/camara-2342835")
+                .canonicalUrl("https://www.translegis.com.br/stat-proposicoes/camara-2342835/")
                 .seoTitle("PL 1234/2024 — Câmara dos Deputados | Transparência Legislativa")
                 .seoDescription("Dispõe sobre acesso à informação legislativa.")
                 .schemaOrgLegislationJson("{\"@context\":\"https://schema.org\",\"@type\":\"Legislation\"}")
@@ -110,7 +111,7 @@ class ThymeleafRendererTest {
         @DisplayName("contém canonical URL")
         void contemCanonicalUrl() {
             var html = renderer.render("proposicao", Map.of("page", buildPage()));
-            assertThat(html).contains("https://www.translegis.com.br/proposicoes/camara-2342835");
+            assertThat(html).contains("https://www.translegis.com.br/stat-proposicoes/camara-2342835/");
             assertThat(html).contains("rel=\"canonical\"");
         }
 
@@ -135,6 +136,18 @@ class ThymeleafRendererTest {
         void contemJsonLdBreadcrumb() {
             var html = renderer.render("proposicao", Map.of("page", buildPage()));
             assertThat(html).contains("\"@type\":\"BreadcrumbList\"");
+        }
+
+        @Test
+        @DisplayName("contém AdSense, Analytics e robots no head")
+        void contemAssetsGlobaisDeHead() {
+            var html = renderer.render("proposicao", Map.of("page", buildPage()));
+            assertThat(html).contains("name=\"google-adsense-account\"");
+            assertThat(html).contains("ca-pub-2690072901856701");
+            assertThat(html).contains("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js");
+            assertThat(html).contains("www.googletagmanager.com/gtag/js?id=G-RR9S2KQ44D");
+            assertThat(html).contains("gtag('config', 'G-RR9S2KQ44D')");
+            assertThat(html).contains("name=\"robots\"");
         }
     }
 
@@ -201,7 +214,7 @@ class ThymeleafRendererTest {
         @DisplayName("contém link para perfil do parlamentar na câmara")
         void contemLinkParlamentarCamara() {
             var html = renderer.render("proposicao", Map.of("page", buildPage()));
-            assertThat(html).contains("/parlamentares/camara-204560");
+            assertThat(html).contains("/stat-parlamentares/camara-204560/");
         }
 
         @Test
@@ -222,7 +235,7 @@ class ThymeleafRendererTest {
                     .ementa("Ementa teste.")
                     .situacaoTramitacao("tramitando")
                     .seoTitle("PL 100/2023").seoDescription("Ementa teste.")
-                    .canonicalUrl("https://x.com/proposicoes/senado-12345")
+                    .canonicalUrl("https://x.com/stat-proposicoes/senado-12345/")
                     .schemaOrgLegislationJson("{}")
                     .schemaOrgBreadcrumbJson("{}")
                     .geradoEm("2024-01-01T00:00:00")
@@ -270,7 +283,7 @@ class ThymeleafRendererTest {
                     .ementa("Ementa PEC.")
                     .situacaoTramitacao("tramitando")
                     .seoTitle("PEC 1/2024").seoDescription("Ementa.")
-                    .canonicalUrl("https://x.com/proposicoes/camara-1")
+                    .canonicalUrl("https://x.com/stat-proposicoes/camara-1/")
                     .schemaOrgLegislationJson("{}")
                     .schemaOrgBreadcrumbJson("{}")
                     .geradoEm("2024-01-01T00:00:00")
@@ -292,7 +305,7 @@ class ThymeleafRendererTest {
                 .ementa("Ementa PLS.")
                 .situacaoTramitacao("tramitando")
                 .seoTitle("PLS 50/2023").seoDescription("Ementa PLS.")
-                .canonicalUrl("https://x.com/proposicoes/senado-12345")
+                .canonicalUrl("https://x.com/stat-proposicoes/senado-12345/")
                 .schemaOrgLegislationJson("{}")
                 .schemaOrgBreadcrumbJson("{}")
                 .geradoEm("2024-01-01T00:00:00")
@@ -305,10 +318,10 @@ class ThymeleafRendererTest {
     // ── Breadcrumb ────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("breadcrumb contém link para /proposicoes")
+    @DisplayName("breadcrumb contém link para /stat-proposicoes")
     void breadcrumbContemLinkProposicoes() {
         var html = renderer.render("proposicao", Map.of("page", buildPage()));
-        assertThat(html).contains("href=\"/proposicoes\"");
+        assertThat(html).contains("href=\"/stat-proposicoes/\"");
         assertThat(html).contains("Proposições");
     }
 

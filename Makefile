@@ -1,4 +1,4 @@
-.PHONY: help up down dev build test logs clean db-only ingest ingest-doc pages-generate pages-generate-ano pages-status
+.PHONY: help up down dev build test logs clean db-only ingest ingest-doc pages-generate pages-status pages-status-parl
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  ETL Congresso — Comandos principais
@@ -103,18 +103,14 @@ ingest-doc: ## Exibe o caminho do guia de operação da ingestão
 
 # ── Geração de Páginas Estáticas ──────────────────────────────────────────────
 
-pages-generate: ## Gera todas as páginas estáticas de proposições (requer app rodando)
-	@curl -sf -X POST -u admin:changeme \
-	  http://localhost:8080/admin/etl/pages/generate \
-	  | python3 -m json.tool
-
-pages-generate-ano: ## Gera páginas de um ano específico (uso: make pages-generate-ano ANO=2024)
-	@test -n "$(ANO)" || (echo "Informe o ano: make pages-generate-ano ANO=2024" && exit 1)
-	@curl -sf -X POST -u admin:changeme \
-	  "http://localhost:8080/admin/etl/pages/generate?ano=$(ANO)" \
-	  | python3 -m json.tool
+pages-generate: ## Gera páginas via ingest.sh (opções: ANO=2024 PROPOSICOES=true|false PARLAMENTARES=true|false)
+	@./scripts/ingest.sh --env $${ENV:-host} --mode pages-generate \
+		$$( [ -n "$${ANO:-}" ] && echo --ano "$${ANO}" ) \
+		$$( [ "$${PROPOSICOES:-}" = "true" ] && echo --proposicoes ) \
+		$$( [ "$${PARLAMENTARES:-}" = "true" ] && echo --parlamentares )
 
 pages-status: ## Verifica status da geração de páginas
-	@curl -sf -u admin:changeme \
-	  http://localhost:8080/admin/etl/pages/status \
-	  | python3 -m json.tool
+	@./scripts/ingest.sh --env $${ENV:-host} --mode pages-status
+
+pages-status-parl: ## Verifica status da geração de páginas de parlamentares
+	@./scripts/ingest.sh --env $${ENV:-host} --mode pages-status-parl

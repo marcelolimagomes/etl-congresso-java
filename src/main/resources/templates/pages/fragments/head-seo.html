@@ -33,6 +33,8 @@
       content="https://www.translegis.com.br/og-image.png"
     />
 
+    <th:block th:replace="~{fragments/head-global :: common(${globalHead})}"></th:block>
+
     <!-- Schema.org JSON-LD: Legislation -->
     <script
       type="application/ld+json"
@@ -44,12 +46,6 @@
       type="application/ld+json"
       th:utext="${page.schemaOrgBreadcrumbJson}"
     ></script>
-
-    <!-- CSS do Nuxt UI / Tailwind (disponível após hidratação do SPA) -->
-    <link rel="preconnect" href="https://www.translegis.com.br" />
-
-    <!-- Tema: sincroniza com Nuxt (localStorage nuxt-color-mode) -->
-    <script>(function(){try{var m=localStorage.getItem('nuxt-color-mode')||'light';if(m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}}());</script>
 
     <!-- Estilos mínimos para renderização sem JavaScript -->
     <style>

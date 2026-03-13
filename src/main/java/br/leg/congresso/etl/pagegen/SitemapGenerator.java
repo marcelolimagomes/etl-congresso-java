@@ -21,7 +21,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>
  * Formato: Sitemap 0.9, UTF-8. Cada URL aponta para
- * {@code /proposicoes/{casa}-{idOrigem}} com {@code changefreq=weekly}
+ * {@code /stat-proposicoes/{casa}-{idOrigem}/} com {@code changefreq=weekly}
  * e {@code priority} variando entre camara (0.7) e senado (0.6).
  */
 @Slf4j

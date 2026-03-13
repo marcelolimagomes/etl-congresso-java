@@ -68,9 +68,9 @@ import lombok.extern.slf4j.Slf4j;
  * <li>Monta {@link DeputadoPageDTO} e renderiza via
  * {@link ThymeleafRenderer}</li>
  * <li>Grava em
- * {@code outputDir/parlamentares/camara-{camaraId}/index.html}</li>
+ * {@code outputDir/stat-parlamentares/camara-{camaraId}/index.html}</li>
  * <li>Repete o processo para senadores →
- * {@code outputDir/parlamentares/senado-{codigoSenador}/index.html}</li>
+ * {@code outputDir/stat-parlamentares/senado-{codigoSenador}/index.html}</li>
  * </ol>
  */
 @Slf4j
@@ -977,10 +977,9 @@ public class ParlamentaresPageGeneratorService {
           .append("  <title>Índice de Parlamentares — Transparência Legislativa</title>\n")
           .append("  <meta name=\"description\" content=\"Lista completa de ").append(total)
           .append(" parlamentares do Congresso Nacional.\" />\n")
-          .append("  <link rel=\"canonical\" href=\"https://www.translegis.com.br/stat-parlamentares/\" />\n")
-          .append("  <script>(function(){try{var m=localStorage.getItem('nuxt-color-mode')||'light';")
-          .append("if(m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches))")
-          .append("{document.documentElement.classList.add('dark');}}catch(e){}}());</script>\n")
+                    .append("  <link rel=\"canonical\" href=\"https://www.translegis.com.br/stat-parlamentares/\" />\n");
+                StaticPageGlobalHead.appendCommonHeadTags(sb);
+                sb
           .append("  <style>\n")
           .append("    :root{--bg:#f9fafb;--bgc:#fff;--tx:#111827;--txm:#6b7280;--bd:#e5e7eb;--hd:#1a4480;--lk:#3b82f6;--sp:#f3f4f6;}\n")
           .append("    :root.dark{--bg:#111827;--bgc:#1f2937;--tx:#f1f5f9;--txm:#9ca3af;--bd:#374151;--hd:#60a5fa;--lk:#93c5fd;--sp:#374151;}\n")

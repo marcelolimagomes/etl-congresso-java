@@ -30,6 +30,8 @@
     <meta name="twitter:title" th:content="${page.seoTitle}" />
     <meta name="twitter:description" th:content="${page.seoDescription}" />
 
+    <th:block th:replace="~{fragments/head-global :: common(${globalHead})}"></th:block>
+
     <script
       type="application/ld+json"
       th:utext="${page.schemaOrgPersonJson}"
@@ -39,9 +41,6 @@
       type="application/ld+json"
       th:utext="${page.schemaOrgBreadcrumbJson}"
     ></script>
-
-    <!-- Tema: sincroniza com Nuxt (localStorage nuxt-color-mode) -->
-    <script>(function(){try{var m=localStorage.getItem('nuxt-color-mode')||'light';if(m==='dark'||(m==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}}());</script>
 
     <style>
       :root {

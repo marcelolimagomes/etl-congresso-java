@@ -11,7 +11,7 @@ package br.leg.congresso.etl.pagegen.dto;
  * @param casaLabel    rótulo da casa: {@code Câmara dos Deputados} | {@code Senado Federal}
  * @param urlFoto      URL da foto oficial (pode ser null)
  * @param participacao {@code Titular} | {@code Suplente} (senadores) ou null (deputados)
- * @param url          caminho relativo, ex: {@code /parlamentares/camara-2430}
+ * @param url          caminho relativo, ex: {@code /stat-parlamentares/camara-2430/}
  */
 public record ParlamentarIndexItemDTO(
         String slugId,

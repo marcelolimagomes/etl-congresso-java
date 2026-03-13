@@ -12,6 +12,9 @@ DATA_FIM=""
 ANO=""
 DATA=""
 
+GEN_PROPOSICOES="false"
+GEN_PARLAMENTARES="false"
+
 APP_PID=""
 APP_STARTED_BY_SCRIPT="false"
 RUNTIME_LOG_DIR=""
@@ -50,17 +53,13 @@ Modos:
   senado-full          POST /admin/etl/senado/full-load
   senado-incremental   POST /admin/etl/senado/incremental
   senado-reprocess     POST /admin/etl/senado/reprocess
-  pages-generate       POST /admin/etl/pages/generate (proposições + matérias)
-  pages-generate-ano   POST /admin/etl/pages/generate?ano=YYYY (proposições + matérias de um ano)
-  pages-generate-pm    Alias de pages-generate (pm = proposições/matérias)
-  pages-generate-pm-ano Alias de pages-generate-ano
+  pages-generate       Gera páginas estáticas (ver filtros abaixo)
   pages-status         GET  /admin/etl/pages/status
   parlamentares-camara     POST /admin/etl/parlamentares/camara (CSVs + API Câmara)
   parlamentares-camara-csv POST /admin/etl/parlamentares/camara/csv (etapas 1-3: só CSVs, sem sub-recursos API)
   sub-recursos-deputados   POST /admin/etl/parlamentares/camara/sub-recursos (etapa 4: discursos, eventos, histórico, mandatos)
   parlamentares-senado     POST /admin/etl/parlamentares/senado (API Senado)
   parlamentares-all        Ambas as casas parlamentares (câmara + senado)
-  pages-generate-parl      POST /admin/etl/pages/parlamentares/generate
   pages-status-parl        GET  /admin/etl/pages/parlamentares/status
   enriquece-deputados      POST /admin/etl/parlamentares/camara/enriquece (det_* via API)
 
@@ -70,9 +69,13 @@ Opções:
   --ano-fim <YYYY>         Para modo *-full
   --data-inicio <YYYY-MM-DD> Para modo *-incremental
   --data-fim <YYYY-MM-DD>  Para modo *-incremental
-  --ano <YYYY>             Para modo camara-reprocess e pages-generate-ano
+  --ano <YYYY>             Para modo camara-reprocess e pages-generate
   --data <YYYY-MM-DD>      Para modo senado-reprocess
+  --proposicoes            pages-generate: gera páginas de proposições/matérias
+  --parlamentares          pages-generate: gera páginas de parlamentares
   -h, --help               Exibe esta ajuda
+
+  Sem --proposicoes nem --parlamentares, pages-generate gera ambas.
 
 Exemplos:
   $(basename "$0") --env host --mode silver-full --ano-inicio 2024 --ano-fim 2024
@@ -80,13 +83,14 @@ Exemplos:
   $(basename "$0") --env host --mode senado-incremental --data-inicio 2026-03-01 --data-fim 2026-03-05
   $(basename "$0") --env container --mode jobs
   $(basename "$0") --env host --mode pages-generate
-  $(basename "$0") --env host --mode pages-generate-ano --ano 2024
+  $(basename "$0") --env host --mode pages-generate --ano 2024
+  $(basename "$0") --env host --mode pages-generate --proposicoes --ano 2024
+  $(basename "$0") --env host --mode pages-generate --parlamentares
   $(basename "$0") --env host --mode parlamentares-camara --ano-inicio 1988 --ano-fim 2026
   $(basename "$0") --env host --mode parlamentares-camara-csv --ano-inicio 2025 --ano-fim 2026
   $(basename "$0") --env host --mode sub-recursos-deputados
   $(basename "$0") --env host --mode parlamentares-senado
   $(basename "$0") --env host --mode parlamentares-all --ano-inicio 1988 --ano-fim 2026
-  $(basename "$0") --env host --mode pages-generate-parl
 EOF
 }
 
@@ -109,6 +113,8 @@ while [[ $# -gt 0 ]]; do
     --data-fim) DATA_FIM="${2:-}"; shift 2 ;;
     --ano) ANO="${2:-}"; shift 2 ;;
     --data) DATA="${2:-}"; shift 2 ;;
+    --proposicoes) GEN_PROPOSICOES="true"; shift ;;
+    --parlamentares) GEN_PARLAMENTARES="true"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "Argumento desconhecido: $1" ;;
   esac
@@ -339,35 +345,29 @@ case "$MODE" in
     ;;
 
   pages-generate)
-    info "Disparando geração de páginas estáticas (proposições + matérias)..."
-    call_api POST "/admin/etl/pages/generate" | python3 -m json.tool
-    info "Geração iniciada em background. Acompanhe via:"
-    info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status"
-    ;;
+    # Sem filtros: gera proposições + parlamentares
+    if [[ "$GEN_PROPOSICOES" == "false" && "$GEN_PARLAMENTARES" == "false" ]]; then
+      GEN_PROPOSICOES="true"
+      GEN_PARLAMENTARES="true"
+    fi
 
-  pages-generate-ano)
-    [[ -n "$ANO" ]] || die "Informe --ano para pages-generate-ano"
-    info "Disparando geração de páginas estáticas (proposições + matérias) para ano=$ANO..."
-    call_api POST "/admin/etl/pages/generate?ano=$ANO" | python3 -m json.tool
-    info "Geração iniciada em background. Acompanhe via:"
-    info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status"
-    ;;
+    if [[ "$GEN_PROPOSICOES" == "true" ]]; then
+      qs=""
+      [[ -z "$ANO" ]] || qs="?ano=$ANO"
+      info "Disparando geração de páginas de proposições/matérias${ANO:+ (ano=$ANO)}..."
+      call_api POST "/admin/etl/pages/generate${qs}" | python3 -m json.tool
+      info "Geração de proposições iniciada em background."
+    fi
 
-  pages-generate-pm)
-    info "Usando alias pages-generate-pm -> pages-generate"
-    info "Disparando geração de páginas estáticas (proposições + matérias)..."
-    call_api POST "/admin/etl/pages/generate" | python3 -m json.tool
-    info "Geração iniciada em background. Acompanhe via:"
-    info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status"
-    ;;
+    if [[ "$GEN_PARLAMENTARES" == "true" ]]; then
+      info "Disparando geração de páginas de parlamentares..."
+      call_api POST "/admin/etl/pages/parlamentares/generate" | python3 -m json.tool
+      info "Geração de parlamentares iniciada em background."
+    fi
 
-  pages-generate-pm-ano)
-    [[ -n "$ANO" ]] || die "Informe --ano para pages-generate-pm-ano"
-    info "Usando alias pages-generate-pm-ano -> pages-generate-ano"
-    info "Disparando geração de páginas estáticas (proposições + matérias) para ano=$ANO..."
-    call_api POST "/admin/etl/pages/generate?ano=$ANO" | python3 -m json.tool
-    info "Geração iniciada em background. Acompanhe via:"
-    info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status"
+    info "Acompanhe via:"
+    [[ "$GEN_PROPOSICOES" != "true" ]]    || info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status"
+    [[ "$GEN_PARLAMENTARES" != "true" ]] || info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status-parl"
     ;;
 
   pages-status)
@@ -400,13 +400,6 @@ case "$MODE" in
     call_api POST "/admin/etl/parlamentares/senado" | python3 -m json.tool
     info "Ambos os jobs iniciados em background. Acompanhe via:"
     info "  $( basename "$0" ) --env $ENV_NAME --mode jobs"
-    ;;
-
-  pages-generate-parl)
-    info "Disparando geração de páginas estáticas de parlamentares..."
-    call_api POST "/admin/etl/pages/parlamentares/generate" | python3 -m json.tool
-    info "Geração iniciada em background. Acompanhe via:"
-    info "  $( basename "$0" ) --env $ENV_NAME --mode pages-status-parl"
     ;;
 
   pages-status-parl)

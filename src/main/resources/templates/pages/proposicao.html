@@ -218,14 +218,14 @@
         <div th:each="autor : ${page.autores}" class="author-item">
           <div>
             <a
-              th:if="${autor.casa != null and autor.idOriginal != null}"
-              th:href="${'/stat-parlamentares/' + autor.casa + '-' + autor.idOriginal + '/'}"
+              th:if="${autor.perfilUrl != null}"
+              th:href="${autor.perfilUrl}"
               class="author-name"
               th:text="${autor.nome}"
               >Nome do Autor</a
             >
             <span
-              th:unless="${autor.casa != null and autor.idOriginal != null}"
+              th:unless="${autor.perfilUrl != null}"
               class="author-name"
               th:text="${autor.nome}"
               >Nome do Autor</span

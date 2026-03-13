@@ -16,6 +16,8 @@ public class AutorDTO {
     String casa;
     /** ID original do parlamentar na API de origem (null para entidades) */
     String idOriginal;
+    /** URL de perfil resolvida para renderização da página estática, quando disponível */
+    String perfilUrl;
     /** true se for o proponente/primeiro autor */
     boolean proponente;
     String partido;
